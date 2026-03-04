@@ -256,9 +256,9 @@ export default function RecipeDetailPage() {
                       <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
                       <div className="flex-1">
                         <div className="font-medium">
-                          {item.quantity && (typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity) > 0 ? (
-                            <span>{formatQuantityAsFraction(typeof item.quantity === 'string' ? parseFloat(item.quantity) : item.quantity)}</span>
-                          ) : null}
+                          {item.quantity > 0 && (
+                            <>{formatQuantityAsFraction(item.quantity)} </>
+                          )}
                           {item.unit} {decodeHtmlEntities(item.ingredient.name)}
                           {item.isOptional && (
                             <span className="text-sm text-gray-500 ml-2">(optional)</span>
