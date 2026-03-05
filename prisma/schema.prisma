@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Recipe {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  cuisineType       String?  @map("cuisine_type")
+  mealCategory      MealCategory @map("meal_category")
+  prepTimeMinutes   Int?     @map("prep_time_minutes")
+  cookTimeMinutes   Int?     @map("cook_time_minutes")
+  servings          Int
+  difficultyLevel   DifficultyLevel @map("difficulty_level")
+  instructions      Json
+  source            String?
+  sourceUrl         String?  @map("source_url")
+  imageUrl          String?  @map("image_url")
+  imageData         Bytes?   @map("image_data")
+  imageMimeType     String?  @map("image_mime_type")
+  imageFileName     String?  @map("image_file_name")
+  isDraft           Boolean  @default(false) @map("is_draft")
+  importStatus      Json?    @map("import_status")
+  personalRating    Int?     @map("personal_rating")
+  tags              String[]
+  nutritionalInfo   Json?    @map("nutritional_info")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  ingredients       RecipeIngredient[]
+  plannedMeals      PlannedMeal[]
+
+  @@map("recipes")
+}
+
+model Ingredient {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  category        String
+  nutritionalData Json?    @map("nutritional_data")
+  commonSubstitutes String[] @map("common_substitutes")
+  allergenInfo    String[] @map("allergen_info")
+  shelfLifeDays   Int?     @map("shelf_life_days")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  recipeIngredients RecipeIngredient[]
+  shoppingListItems ShoppingListItem[]
+
+  @@map("ingredients")
+}
+
+model RecipeIngredient {
+  id              String  @id @default(cuid())
+  recipeId        String  @map("recipe_id")
+  ingredientId    String  @map("ingredient_id")
+  quantity        Float
+  unit            String
+  preparationNote String? @map("preparation_note")
+  isOptional      Boolean @default(false) @map("is_optional")
+
+  // Relations
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("recipe_ingredients")
+}
+
+model MealPlan {
+  id          String    @id @default(cuid())
+  name        String
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime  @map("end_date") @db.Date
+  budgetLimit Float?    @map("budget_limit")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  plannedMeals    PlannedMeal[]
+  shoppingLists   ShoppingList[]
+
+  @@map("meal_plans")
+}
+
+model PlannedMeal {
+  id              String   @id @default(cuid())
+  mealPlanId      String   @map("meal_plan_id")
+  recipeId        String   @map("recipe_id")
+  mealDate        DateTime @map("meal_date") @db.Date
+  mealType        MealType @map("meal_type")
+  servingsPlanned Int      @map("servings_planned")
+  notes           String?
+
+  // Relations
+  mealPlan MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id])
+
+  @@map("planned_meals")
+}
+
+model ShoppingList {
+  id            String              @id @default(cuid())
+  mealPlanId    String              @map("meal_plan_id")
+  name          String
+  storeName     String?             @map("store_name")
+  estimatedCost Float?              @map("estimated_cost")
+  status        ShoppingListStatus  @default(DRAFT)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  mealPlan MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  items    ShoppingListItem[]
+
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id              String   @id @default(cuid())
+  shoppingListId  String   @map("shopping_list_id")
+  ingredientId    String   @map("ingredient_id")
+  quantity        Float
+  unit            String
+  estimatedPrice  Float?   @map("estimated_price")
+  isPurchased     Boolean  @default(false) @map("is_purchased")
+  category        String?
+  priority        Priority @default(MEDIUM)
+  notes           String?
+
+  // Relations
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient   @relation(fields: [ingredientId], references: [id])
+
+  @@map("shopping_list_items")
+}
+
+// Enums
+enum MealCategory {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  DESSERT
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum ShoppingListStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}

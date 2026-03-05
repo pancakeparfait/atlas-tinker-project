@@ -1,0 +1,129 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e5]
+        - generic [ref=e7]: Recipe Organizer
+      - navigation [ref=e8]:
+        - link "Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - img [ref=e10]
+          - text: Dashboard
+        - link "Recipes" [ref=e12] [cursor=pointer]:
+          - /url: /recipes
+          - img [ref=e13]
+          - text: Recipes
+        - link "Meal Plans" [ref=e16] [cursor=pointer]:
+          - /url: /meal-plans
+          - img [ref=e17]
+          - text: Meal Plans
+        - link "Shopping Lists" [ref=e19] [cursor=pointer]:
+          - /url: /shopping-lists
+          - img [ref=e20]
+          - text: Shopping Lists
+        - link "Settings" [ref=e24] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e25]
+          - text: Settings
+    - generic [ref=e28]:
+      - banner [ref=e29]:
+        - heading "Recipe Organizer" [level=1] [ref=e31]
+        - generic [ref=e33]: Welcome to your kitchen companion
+      - main [ref=e34]:
+        - generic [ref=e36]:
+          - heading "Create New Recipe" [level=1] [ref=e37]
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]: Import from URL
+              - generic [ref=e41]:
+                - textbox "Paste recipe URL here..." [active] [ref=e42]: https://www.allrecipes.com/recipe/20081/sugar-cookies/
+                - button "Import" [ref=e125] [cursor=pointer]:
+                  - img [ref=e126]
+                  - text: Import
+            - generic [ref=e43]:
+              - generic [ref=e44]:
+                - text: Recipe Title *
+                - textbox "Recipe Title *" [ref=e45]:
+                  - /placeholder: Enter recipe title
+              - generic [ref=e46]:
+                - text: Cuisine Type
+                - textbox "Cuisine Type" [ref=e47]:
+                  - /placeholder: e.g., Italian, Mexican, Asian
+              - generic [ref=e48]:
+                - text: Meal Category *
+                - combobox [ref=e49] [cursor=pointer]:
+                  - generic: Dinner
+                  - img [ref=e50]
+                - combobox [ref=e52]
+              - generic [ref=e53]:
+                - text: Difficulty Level *
+                - combobox [ref=e54] [cursor=pointer]:
+                  - generic: Medium
+                  - img [ref=e55]
+                - combobox [ref=e57]
+              - generic [ref=e58]:
+                - text: Servings *
+                - spinbutton "Servings *" [ref=e59]: "4"
+              - generic [ref=e60]:
+                - text: Personal Rating
+                - combobox [ref=e61] [cursor=pointer]:
+                  - generic: Rate this recipe
+                  - img [ref=e62]
+                - combobox [ref=e64]
+            - generic [ref=e65]:
+              - text: Description
+              - textbox "Description" [ref=e66]:
+                - /placeholder: Brief description of the recipe...
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - text: Prep Time (minutes)
+                - spinbutton "Prep Time (minutes)" [ref=e69]
+              - generic [ref=e70]:
+                - text: Cook Time (minutes)
+                - spinbutton "Cook Time (minutes)" [ref=e71]
+              - generic [ref=e72]:
+                - text: Source
+                - textbox "Source" [ref=e73]:
+                  - /placeholder: Cookbook, website, etc.
+            - generic [ref=e74]:
+              - text: Source URL
+              - textbox "Source URL" [ref=e75]:
+                - /placeholder: https://...
+            - generic [ref=e76]:
+              - text: Tags (comma-separated)
+              - textbox "Tags (comma-separated)" [ref=e77]:
+                - /placeholder: vegetarian, quick, comfort-food
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e80]: Ingredients
+                - button "Add Ingredient" [ref=e81] [cursor=pointer]:
+                  - img [ref=e82]
+                  - text: Add Ingredient
+              - generic [ref=e84]:
+                - spinbutton [ref=e86]: "1"
+                - generic [ref=e87]:
+                  - combobox [ref=e88] [cursor=pointer]:
+                    - generic: cup
+                    - img [ref=e89]
+                  - combobox [ref=e91]
+                - textbox "Ingredient name" [ref=e93]
+                - textbox "Preparation (optional)" [ref=e95]
+                - generic [ref=e97]:
+                  - checkbox "Opt." [ref=e98]
+                  - generic [ref=e99]: Opt.
+            - generic [ref=e101]:
+              - generic [ref=e102]: Instructions
+              - button "Add Step" [ref=e103] [cursor=pointer]:
+                - img [ref=e104]
+                - text: Add Step
+            - generic [ref=e105]:
+              - checkbox "Save as draft" [ref=e106]
+              - generic [ref=e107]: Save as draft
+            - generic [ref=e108]:
+              - button "Save Recipe" [ref=e109] [cursor=pointer]:
+                - img [ref=e110]
+                - text: Save Recipe
+              - button "Cancel" [ref=e114] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e120] [cursor=pointer]:
+    - img [ref=e121]
+  - alert [ref=e124]

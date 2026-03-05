@@ -94,48 +94,48 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status  |
-| ----------- | ----- | ------- |
-| FRAC-01     | TBD   | Pending |
-| FRAC-02     | TBD   | Pending |
-| FRAC-03     | TBD   | Pending |
-| FRAC-04     | TBD   | Pending |
-| FRAC-05     | TBD   | Pending |
-| FRAC-06     | TBD   | Pending |
-| FRAC-07     | TBD   | Pending |
-| IMG-01      | TBD   | Pending |
-| IMG-02      | TBD   | Pending |
-| IMG-03      | TBD   | Pending |
-| IMG-04      | TBD   | Pending |
-| IMG-05      | TBD   | Pending |
-| IMG-06      | TBD   | Pending |
-| IMG-07      | TBD   | Pending |
-| MEAL-01     | TBD   | Pending |
-| MEAL-02     | TBD   | Pending |
-| MEAL-03     | TBD   | Pending |
-| MEAL-04     | TBD   | Pending |
-| MEAL-05     | TBD   | Pending |
-| MEAL-06     | TBD   | Pending |
-| MEAL-07     | TBD   | Pending |
-| MEAL-08     | TBD   | Pending |
-| MEAL-09     | TBD   | Pending |
-| SHOP-01     | TBD   | Pending |
-| SHOP-02     | TBD   | Pending |
-| SHOP-03     | TBD   | Pending |
-| SHOP-04     | TBD   | Pending |
-| SHOP-05     | TBD   | Pending |
-| SHOP-06     | TBD   | Pending |
-| SHOP-07     | TBD   | Pending |
-| SHOP-08     | TBD   | Pending |
-| SHOP-09     | TBD   | Pending |
+| Requirement | Phase   | Status  |
+| ----------- | ------- | ------- |
+| FRAC-01     | Phase 1 | Pending |
+| FRAC-02     | Phase 1 | Pending |
+| FRAC-03     | Phase 1 | Pending |
+| FRAC-04     | Phase 1 | Pending |
+| FRAC-05     | Phase 1 | Pending |
+| FRAC-06     | Phase 1 | Pending |
+| FRAC-07     | Phase 1 | Pending |
+| IMG-01      | Phase 2 | Pending |
+| IMG-02      | Phase 2 | Pending |
+| IMG-03      | Phase 2 | Pending |
+| IMG-04      | Phase 2 | Pending |
+| IMG-05      | Phase 2 | Pending |
+| IMG-06      | Phase 2 | Pending |
+| IMG-07      | Phase 2 | Pending |
+| MEAL-01     | Phase 3 | Pending |
+| MEAL-02     | Phase 3 | Pending |
+| MEAL-03     | Phase 3 | Pending |
+| MEAL-04     | Phase 3 | Pending |
+| MEAL-05     | Phase 3 | Pending |
+| MEAL-06     | Phase 3 | Pending |
+| MEAL-07     | Phase 3 | Pending |
+| MEAL-08     | Phase 3 | Pending |
+| MEAL-09     | Phase 3 | Pending |
+| SHOP-01     | Phase 4 | Pending |
+| SHOP-02     | Phase 4 | Pending |
+| SHOP-03     | Phase 4 | Pending |
+| SHOP-04     | Phase 4 | Pending |
+| SHOP-05     | Phase 4 | Pending |
+| SHOP-06     | Phase 4 | Pending |
+| SHOP-07     | Phase 4 | Pending |
+| SHOP-08     | Phase 4 | Pending |
+| SHOP-09     | Phase 4 | Pending |
 
 **Coverage:**
 
 - v1 requirements: 33 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33 ✓
+- Unmapped: 0 ✓
 
 ---
 
 _Requirements defined: 2026-02-18_
-_Last updated: 2026-02-18 after initial definition_
+_Last updated: 2026-02-18 after roadmap creation (traceability mapped)_
