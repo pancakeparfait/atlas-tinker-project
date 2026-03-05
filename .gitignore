@@ -23,6 +23,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local env files
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -50,3 +51,28 @@ logs
 # Temporary files
 .tmp/
 .temp/
+
+# Screenshots and test artifacts (from verification)
+*.png
+*.jpg
+*.jpeg
+import-form.md
+test-results.log
+
+# pnpm lock file (controversial - usually tracked, but optional)
+# pnpm-lock.yaml
+
+# IDE specific
+.claude/
+.vscode/settings.json
+.vscode/extensions.json
+.vscode/launch.json
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Playwright output
+playwright-mcp-output/
+
+# Planning files (optional - change if you want to track these)
+# .planning/
