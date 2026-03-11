@@ -64,6 +64,44 @@ export function formatQuantityAsFraction(quantity: number): string {
     }
   }
   
+  // FIRST: Check if fractionalPart is already an exact match to a common fraction
+  // This prevents simple fractions (0.5, 0.25, 0.75) from being converted to compounds
+  for (const frac of commonFractions) {
+    if (Math.abs(fractionalPart - frac.value) < 0.001) {
+      // Exact match - use simple fraction, no compound needed
+      const fractionString = `${frac.num}/${frac.den}`;
+      if (wholePart > 0) {
+        return `${wholePart} ${fractionString}`;
+      }
+      return fractionString;
+    }
+  }
+  
+  // SECOND: Check for exact compound measurement (fraction + tablespoons)
+  // Only reach here if no exact simple fraction match exists
+  // Example: 0.625 = 1/2 (0.5) + 2 Tbsp (2 × 0.0625) exactly
+  for (const frac of commonFractions) {
+    const remainder = fractionalPart - frac.value;
+    
+    // Only consider positive remainders in the 1-3 Tbsp range
+    // 1 Tbsp = 0.0625 cups (1/16), 4 Tbsp = 0.25 cups (1/4)
+    if (remainder >= 0.055 && remainder <= 0.195) {
+      const tbsp = Math.round(remainder / 0.0625);
+      const expectedRemainder = tbsp * 0.0625;
+      
+      // If match is exact (within 0.01 tolerance), use compound
+      if (Math.abs(remainder - expectedRemainder) < 0.01 && tbsp >= 1 && tbsp <= 3) {
+        const fractionString = `${frac.num}/${frac.den}`;
+        const tbspString = `${tbsp} Tbsp`;
+        
+        if (wholePart > 0) {
+          return `${wholePart} ${fractionString} cup and ${tbspString}`;
+        }
+        return `${fractionString} cup and ${tbspString}`;
+      }
+    }
+  }
+
   // Format as mixed number or simple fraction
   const fractionString = `${bestFraction.num}/${bestFraction.den}`;
   

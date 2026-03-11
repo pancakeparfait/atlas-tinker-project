@@ -80,21 +80,21 @@ describe('formatQuantityAsFraction', () => {
       expect(formatQuantityAsFraction(0.375)).toBe('3/8');
     });
 
-    it('should format 0.625 as closest common fraction "2/3"', () => {
-      // 0.625 is between 3/8 (0.375) and 2/3 (0.667)
-      // Closest to 2/3 (diff of 0.042) vs 3/8 (diff of 0.25)
-      expect(formatQuantityAsFraction(0.625)).toBe('2/3');
+    it('should format 0.625 as compound measurement "1/2 cup and 2 Tbsp"', () => {
+      // 0.625 = 1/2 (0.5) + 2 Tbsp (2 × 0.0625) exactly
+      // Compound measurement is more precise than approximating to 2/3
+      expect(formatQuantityAsFraction(0.625)).toBe('1/2 cup and 2 Tbsp');
     });
 
-    it('should format 0.875 as closest common fraction "3/4"', () => {
-      // 0.875 is between 3/4 (0.75) and 1 (1.0)
-      // Closest to 3/4 (diff of 0.125)
-      expect(formatQuantityAsFraction(0.875)).toBe('3/4');
+    it('should format 0.875 as compound measurement "3/4 cup and 2 Tbsp"', () => {
+      // 0.875 = 3/4 (0.75) + 2 Tbsp (2 × 0.0625) exactly
+      // Compound measurement is exact
+      expect(formatQuantityAsFraction(0.875)).toBe('3/4 cup and 2 Tbsp');
     });
 
-    it('should format 2.625 as "2 2/3" (closest common fraction)', () => {
-      // 0.625 part closest to 2/3
-      expect(formatQuantityAsFraction(2.625)).toBe('2 2/3');
+    it('should format 2.625 as "2 1/2 cup and 2 Tbsp"', () => {
+      // 2.625 = 2 + 1/2 (0.5) + 2 Tbsp (2 × 0.0625) exactly
+      expect(formatQuantityAsFraction(2.625)).toBe('2 1/2 cup and 2 Tbsp');
     });
   });
 
