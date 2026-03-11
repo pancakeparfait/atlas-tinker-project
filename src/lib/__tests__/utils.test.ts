@@ -165,4 +165,12 @@ describe('formatQuantityAsFraction', () => {
       expect(formatQuantityAsFraction(1 + 2/3)).toBe('1 2/3');
     });
   });
+
+  describe('compound measurements', () => {
+    it('should format 0.625 cups as "1/2 cup and 2 Tbsp"', () => {
+      // 0.625 cups = 1/2 cup (0.5) + 2 Tbsp (0.125)
+      // More precise than rounding to 2/3 (0.667)
+      expect(formatQuantityAsFraction(0.625)).toBe('1/2 cup and 2 Tbsp');
+    });
+  });
 });
