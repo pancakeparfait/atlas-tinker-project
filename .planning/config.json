@@ -12,9 +12,9 @@
         "verification": "opencode/glm-4.7-free"
       },
       "balanced": {
-        "planning": "github-copilot/claude-sonnet-4.5",
-        "execution": "github-copilot/claude-haiku-4.5",
-        "verification": "github-copilot/claude-haiku-4.5"
+        "planning": "opencode/glm-4.7-free",
+        "execution": "opencode/glm-4.7-free",
+        "verification": "opencode/glm-4.7-free"
       },
       "budget": {
         "planning": "opencode/minimax-m2.1-free",
