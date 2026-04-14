@@ -288,3 +288,35 @@ No third-party shadcn registries declared. Registry safety gate: not applicable.
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+
+---
+
+## Pre-Populated From
+
+| Source | Decisions Used |
+|--------|---------------|
+| 02-CONTEXT.md | 7 (storage model, gallery layout, upload experience, reordering, list thumbnails) |
+| globals.css | 6 (color values, primary/secondary/accent/destructive) |
+| Recipe detail page | 3 (delete pattern, skeleton style, image container) |
+| Recipe list page | 1 (card image dimensions) |
+| OpenCode discretion | 4 (thumbnail sizes, skeleton design, error state, confirmation) |
+
+**Total pre-populated:** 21 decisions from upstream + 4 discretion decisions.
+
+---
+
+## Design Notes
+
+### Migration Strategy
+- Single existing image migrates to `RecipeImage` table with `order=0`
+- Gallery shows only primary (order=0) by default
+- Users can add more images via upload component
+
+### Accessibility
+- All images have meaningful alt text (recipe title)
+- Thumbnail strip uses `role="tablist"` pattern if interactive tabs needed
+- Upload zone is keyboard accessible (click to open file picker)
+
+### Dark Mode
+- All colors use CSS variables, already have dark mode definitions in globals.css
+- Image placeholders use `bg-gray-900` in dark mode (via `dark:` classes if needed)
