@@ -221,4 +221,63 @@ export class DatabaseStorageAdapter implements StorageAdapter {
         return true; // Allow unknown types to pass basic validation
     }
   }
+
+  // --- New multi-image APIs ---
+  async saveRecipeImage(recipeId: string, data: Buffer, metadata: StorageMetadata, order: number): Promise<string> {
+    const validation = await this.validateImage(data, metadata);
+    if (!validation.isValid) {
+      throw new Error(`Invalid image: ${validation.errors.join(', ')}`);
+    }
+    const created: any = await (prisma as any).recipeImage.create({
+      data: {
+        recipeId,
+        order,
+        data,
+        mimeType: metadata.mimeType,
+        fileName: metadata.fileName,
+      },
+    });
+    return created.id;
+  }
+
+  async getRecipeImages(recipeId: string): Promise<StoredImage[]> {
+    const imgs = await (prisma as any).recipeImage.findMany({
+      where: { recipeId },
+      orderBy: { order: 'asc' },
+    });
+    return imgs.map((img: any) => ({
+      id: img.id,
+      data: img.data,
+      metadata: {
+        mimeType: img.mimeType,
+        fileName: img.fileName,
+        size: img.data?.length ?? 0,
+      },
+    }));
+  }
+
+  async getRecipeImage(recipeId: string, imageId: string): Promise<StoredImage | null> {
+    const img = await (prisma as any).recipeImage.findFirst({ where: { id: imageId, recipeId } });
+    if (!img || !img.data) return null;
+    return {
+      id: img.id,
+      data: img.data,
+      metadata: {
+        mimeType: img.mimeType,
+        fileName: img.fileName,
+        size: img.data.length,
+      },
+    };
+  }
+
+  async deleteRecipeImage(recipeId: string, imageId: string): Promise<void> {
+    await (prisma as any).recipeImage.deleteMany({ where: { id: imageId, recipeId } });
+  }
+
+  async reorderRecipeImages(recipeId: string, imageIds: string[]): Promise<void> {
+    for (let idx = 0; idx < imageIds.length; idx++) {
+      const id = imageIds[idx];
+      await (prisma as any).recipeImage.update({ where: { id }, data: { order: idx } });
+    }
+  }
 }

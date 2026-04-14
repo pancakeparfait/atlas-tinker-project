@@ -78,6 +78,7 @@ export interface StorageAdapter {
    * single transaction, guarding against cross-recipe manipulation.
    */
   reorderRecipeImages(recipeId: string, orderedIds: string[]): Promise<void>;
+
 }
 
 // Configuration for image validation
