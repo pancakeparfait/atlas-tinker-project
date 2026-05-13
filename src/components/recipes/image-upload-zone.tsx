@@ -87,7 +87,7 @@ export function ImageUploadZone({ recipeId, disabled }: ImageUploadZoneProps): R
     }
     setActiveBatchIds((prev) => {
       const next = new Set(prev);
-      for (const id of batchRowIds) next.add(id);
+      batchRowIds.forEach((id) => next.add(id));
       return next;
     });
 
@@ -135,7 +135,7 @@ export function ImageUploadZone({ recipeId, disabled }: ImageUploadZoneProps): R
     } finally {
       setActiveBatchIds((prev) => {
         const next = new Set(prev);
-        for (const id of batchRowIds) next.delete(id);
+        batchRowIds.forEach((id) => next.delete(id));
         return next;
       });
     }

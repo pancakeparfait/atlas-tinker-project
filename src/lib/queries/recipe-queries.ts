@@ -1,7 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MealCategory, DifficultyLevel } from '@prisma/client';
 
-export interface Recipe {
+// WR-07: split RecipeListItem (list responses) vs RecipeDetail (detail
+// responses). The previous `Recipe.images?` made the optionality invisible
+// to callers — list responses never include `images`, detail responses
+// always include it. Discriminating them in the type system prevents a
+// caller from writing `recipes.recipes[0].images!.length` (runtime crash).
+//
+// `Recipe` remains exported as the discriminated union so legacy callers
+// keep compiling; new code should prefer the specific variants.
+
+interface RecipeBase {
   id: string;
   title: string;
   description?: string;
@@ -15,13 +24,6 @@ export interface Recipe {
   source?: string;
   sourceUrl?: string;
   imageUrl?: string;
-  images?: Array<{
-    id: string;
-    order: number;
-    fileName: string;
-    mimeType: string;
-  }>;
-  primaryImageId?: string | null;
   personalRating?: number;
   tags: string[];
   nutritionalInfo?: any;
@@ -41,6 +43,29 @@ export interface Recipe {
     };
   }>;
 }
+
+export interface RecipeImageMeta {
+  id: string;
+  order: number;
+  fileName: string;
+  mimeType: string;
+}
+
+export interface RecipeListItem extends RecipeBase {
+  /** Order=0 image id, or null when no images attached. List responses
+   *  intentionally omit the full images array to keep payloads small. */
+  primaryImageId: string | null;
+  // No `images` key — see GET /api/recipes serializer.
+}
+
+export interface RecipeDetail extends RecipeBase {
+  /** Full image metadata list, sorted by `order` ascending. Detail responses
+   *  always include this (may be empty). Bytes are never included. */
+  images: RecipeImageMeta[];
+}
+
+/** Discriminated union for callers that may receive either shape. */
+export type Recipe = RecipeListItem | RecipeDetail;
 
 export interface RecipeInput {
   title: string;
@@ -90,9 +115,12 @@ export const recipeKeys = {
   image: (id: string) => [...recipeKeys.all, 'image', id] as const,
 };
 
-// Fetch functions
+// Fetch functions. WR-07: list returns RecipeListItem[], detail / create /
+// update return RecipeDetail. This makes the API contract visible at the
+// type level — list responses have `primaryImageId` (no `images`), detail/
+// mutation responses have `images` (no `primaryImageId`).
 async function fetchRecipes(params: RecipeSearchParams = {}): Promise<{
-  recipes: Recipe[];
+  recipes: RecipeListItem[];
   pagination: {
     page: number;
     limit: number;
@@ -101,7 +129,7 @@ async function fetchRecipes(params: RecipeSearchParams = {}): Promise<{
   };
 }> {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       if (Array.isArray(value)) {
@@ -116,20 +144,20 @@ async function fetchRecipes(params: RecipeSearchParams = {}): Promise<{
   if (!response.ok) {
     throw new Error('Failed to fetch recipes');
   }
-  
+
   return response.json();
 }
 
-async function fetchRecipe(id: string): Promise<Recipe> {
+async function fetchRecipe(id: string): Promise<RecipeDetail> {
   const response = await fetch(`${API_BASE}/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch recipe');
   }
-  
+
   return response.json();
 }
 
-async function createRecipe(data: RecipeInput): Promise<Recipe> {
+async function createRecipe(data: RecipeInput): Promise<RecipeDetail> {
   const response = await fetch(API_BASE, {
     method: 'POST',
     headers: {
@@ -145,7 +173,7 @@ async function createRecipe(data: RecipeInput): Promise<Recipe> {
   return response.json();
 }
 
-async function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
+async function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<RecipeDetail> {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: 'PUT',
     headers: {

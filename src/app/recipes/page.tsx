@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Filter, Clock, Users, Star, Utensils } from 'lucide-react';
 import Image from 'next/image';
-import { useRecipes, type Recipe } from '@/lib/queries/recipe-queries';
+import { useRecipes, type RecipeListItem } from '@/lib/queries/recipe-queries';
 import { MEAL_CATEGORIES } from '@/components/recipes/recipe-form-schema';
 
 export default function RecipesPage() {
@@ -20,7 +20,7 @@ export default function RecipesPage() {
 
   const { data: recipes, isLoading, error } = useRecipes();
 
-  const filteredRecipes = recipes?.recipes?.filter((recipe: Recipe) => {
+  const filteredRecipes = recipes?.recipes?.filter((recipe: RecipeListItem) => {
     const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       recipe.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       recipe.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -35,7 +35,7 @@ export default function RecipesPage() {
     router.push('/recipes/new');
   };
 
-  const handleRecipeClick = (recipe: Recipe) => {
+  const handleRecipeClick = (recipe: RecipeListItem) => {
     router.push(`/recipes/${recipe.id}` as any);
   };
 
@@ -149,7 +149,7 @@ export default function RecipesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecipes.map((recipe: Recipe) => (
+          {filteredRecipes.map((recipe: RecipeListItem) => (
             <Card
               key={recipe.id}
               className="cursor-pointer hover:shadow-lg transition-shadow"
