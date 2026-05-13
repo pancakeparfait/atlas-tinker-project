@@ -20,6 +20,18 @@ interface FileRow {
   error?: string;
 }
 
+// WR-04: deterministic, per-batch unique id generator. crypto.randomUUID is
+// available in modern browsers and node; the counter fallback keeps tests and
+// older environments working without injecting Math.random entropy.
+let rowIdCounter = 0;
+function nextRowId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  rowIdCounter += 1;
+  return `row-${Date.now()}-${rowIdCounter}`;
+}
+
 function validateClientSide(file: File): { ok: true } | { ok: false; error: string } {
   if (file.size > IMAGE_CONFIG.maxSizeBytes) {
     return { ok: false, error: 'Photo must be under 10MB' };
@@ -37,18 +49,23 @@ function validateClientSide(file: File): { ok: true } | { ok: false; error: stri
 export function ImageUploadZone({ recipeId, disabled }: ImageUploadZoneProps): React.JSX.Element {
   const [isDragOver, setIsDragOver] = useState(false);
   const [rows, setRows] = useState<FileRow[]>([]);
+  // WR-01 / WR-02: per-batch tracking. We record the row ids that belong to
+  // each in-flight batch so success/error transitions only touch that batch's
+  // rows. Without this, batches A and B both touching the same `uploading`
+  // state would clobber each other on completion.
+  const [activeBatchIds, setActiveBatchIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useUploadRecipeImages();
 
   async function handleFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList);
-    const valid: File[] = [];
+    const valid: { file: File; rowId: string }[] = [];
     const newRows: FileRow[] = [];
     for (const f of incoming) {
       const v = validateClientSide(f);
-      const id = `${f.name}-${Date.now()}-${Math.random()}`;
+      const id = nextRowId();
       if (v.ok) {
-        valid.push(f);
+        valid.push({ file: f, rowId: id });
         newRows.push({ id, fileName: f.name, status: 'uploading' });
       } else {
         newRows.push({ id, fileName: f.name, status: 'error', error: v.error });
@@ -56,32 +73,80 @@ export function ImageUploadZone({ recipeId, disabled }: ImageUploadZoneProps): R
     }
     setRows((prev) => [...prev, ...newRows]);
     if (valid.length === 0) return;
+
+    // WR-01 / WR-02: scope state transitions to THIS batch's rows.
+    const batchRowIds = new Set(valid.map((v) => v.rowId));
+    // Map fileName -> rowId for THIS batch so CR-03 can resolve server-side
+    // failures back to the originating row even when the user uploads the
+    // same filename across separate batches.
+    const batchFileToRow = new Map<string, string>();
+    for (const v of valid) {
+      // Last writer wins for duplicate names within a single batch; this is
+      // acceptable because the server keys partial failures off file name.
+      batchFileToRow.set(v.file.name, v.rowId);
+    }
+    setActiveBatchIds((prev) => {
+      const next = new Set(prev);
+      for (const id of batchRowIds) next.add(id);
+      return next;
+    });
+
     try {
-      await uploadMutation.mutateAsync({ recipeId, files: valid });
+      // CR-03: honor the server's `failed` array. Files the server rejected
+      // (oversize, bad MIME, corrupt header) must be flipped to 'error' even
+      // though the overall POST returned 201.
+      const result = await uploadMutation.mutateAsync({
+        recipeId,
+        files: valid.map((v) => v.file),
+      });
+      const failedByRow = new Map<string, string>();
+      for (const f of result.failed ?? []) {
+        const rowId = batchFileToRow.get(f.fileName);
+        if (rowId) failedByRow.set(rowId, f.error);
+      }
       setRows((prev) =>
-        prev.map((row) =>
-          valid.some((f) => f.name === row.fileName) && row.status === 'uploading'
-            ? { ...row, status: 'done' }
-            : row
-        )
+        prev.map((row) => {
+          if (!batchRowIds.has(row.id)) return row;
+          if (row.status !== 'uploading') return row;
+          if (failedByRow.has(row.id)) {
+            return {
+              ...row,
+              status: 'error',
+              error: failedByRow.get(row.id) ?? 'Upload rejected',
+            };
+          }
+          return { ...row, status: 'done' };
+        })
       );
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Upload failed. Check your connection and try again.';
+      // WR-02: only flip THIS batch's rows to error. A concurrent batch's
+      // rows that are also in 'uploading' state are left alone.
       setRows((prev) =>
         prev.map((row) =>
-          row.status === 'uploading' ? { ...row, status: 'error', error: message } : row
+          batchRowIds.has(row.id) && row.status === 'uploading'
+            ? { ...row, status: 'error', error: message }
+            : row
         )
       );
+    } finally {
+      setActiveBatchIds((prev) => {
+        const next = new Set(prev);
+        for (const id of batchRowIds) next.delete(id);
+        return next;
+      });
     }
   }
 
-  const validRowsInFlight = rows.filter(
-    (r) => r.status === 'uploading' || r.status === 'done'
-  ).length;
-  const doneCount = rows.filter((r) => r.status === 'done').length;
+  // WR-01: progress copy reads from the active batches, not the cumulative
+  // rows array. Otherwise prior batches' `done` rows keep inflating the
+  // denominator across sessions.
+  const inFlightRows = rows.filter((r) => activeBatchIds.has(r.id));
+  const validRowsInFlight = inFlightRows.length;
+  const doneCount = inFlightRows.filter((r) => r.status === 'done').length;
 
   return (
     <div className="space-y-3">
