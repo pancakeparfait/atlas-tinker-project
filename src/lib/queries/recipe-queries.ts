@@ -15,6 +15,13 @@ export interface Recipe {
   source?: string;
   sourceUrl?: string;
   imageUrl?: string;
+  images?: Array<{
+    id: string;
+    order: number;
+    fileName: string;
+    mimeType: string;
+  }>;
+  primaryImageId?: string | null;
   personalRating?: number;
   tags: string[];
   nutritionalInfo?: any;
