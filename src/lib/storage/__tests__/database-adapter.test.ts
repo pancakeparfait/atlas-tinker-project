@@ -198,10 +198,9 @@ describe('DatabaseStorageAdapter — multi-image methods', () => {
         adapter.deleteRecipeImage(imageId, recipeId)
       ).rejects.toMatchObject({ code: 'P2025' });
 
-      // Composite-where contract: BOTH id and recipeId in the delete predicate
-      expect(tx.recipeImage.delete.mock.calls[0][0]).toEqual({
-        where: { id: imageId, recipeId },
-      });
+      // Composite-where contract: BOTH id and recipeId in the delete predicate (single-line to match plan grep contract)
+      // prettier-ignore
+      expect(tx.recipeImage.delete.mock.calls[0][0]).toEqual({ where: { id: imageId, recipeId } });
       // No partial mutation when delete fails
       expect(tx.recipeImage.findMany).not.toHaveBeenCalled();
       expect(tx.recipeImage.update).not.toHaveBeenCalled();

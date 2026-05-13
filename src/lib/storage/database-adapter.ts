@@ -97,6 +97,109 @@ export class DatabaseStorageAdapter implements StorageAdapter {
     };
   }
 
+  // --- Multi-image (Phase 2) ---
+
+  async saveRecipeImage(
+    recipeId: string,
+    data: Buffer,
+    metadata: StorageMetadata,
+    order: number,
+  ): Promise<string> {
+    const validation = await this.validateImage(data, metadata);
+    if (!validation.isValid) {
+      throw new Error(`Invalid image: ${validation.errors.join(', ')}`);
+    }
+
+    const created = await prisma.recipeImage.create({
+      data: {
+        recipeId,
+        order,
+        data,
+        mimeType: metadata.mimeType,
+        fileName: metadata.fileName,
+      },
+      select: { id: true },
+    });
+
+    return created.id;
+  }
+
+  async getRecipeImage(imageId: string): Promise<StoredImage | null> {
+    const row = await prisma.recipeImage.findUnique({
+      where: { id: imageId },
+      select: {
+        id: true,
+        data: true,
+        mimeType: true,
+        fileName: true,
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      data: row.data,
+      metadata: {
+        mimeType: row.mimeType,
+        fileName: row.fileName,
+        size: row.data.length,
+      },
+    };
+  }
+
+  async listRecipeImages(recipeId: string): Promise<Array<{
+    id: string;
+    order: number;
+    fileName: string;
+    mimeType: string;
+  }>> {
+    return prisma.recipeImage.findMany({
+      where: { recipeId },
+      orderBy: { order: 'asc' },
+      select: { id: true, order: true, fileName: true, mimeType: true },
+    });
+  }
+
+  async deleteRecipeImage(imageId: string, recipeId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // Composite where guards against cross-recipe deletion (Pitfall: Elevation of Privilege).
+      // Prisma will throw P2025 if no row matches; we let it propagate so callers map to 404.
+      await tx.recipeImage.delete({ where: { id: imageId, recipeId } });
+
+      const remaining = await tx.recipeImage.findMany({
+        where: { recipeId },
+        orderBy: { order: 'asc' },
+        select: { id: true },
+      });
+
+      // Renormalize remaining orders to a contiguous 0..n-1 sequence inside the same tx.
+      await Promise.all(
+        remaining.map((img, idx) =>
+          tx.recipeImage.update({
+            where: { id: img.id },
+            data: { order: idx },
+          }),
+        ),
+      );
+    });
+  }
+
+  async reorderRecipeImages(recipeId: string, orderedIds: string[]): Promise<void> {
+    // Composite where prevents reordering another recipe's images.
+    // The route layer is responsible for validating orderedIds is the complete set.
+    await prisma.$transaction(
+      orderedIds.map((imageId, index) =>
+        prisma.recipeImage.update({
+          where: { id: imageId, recipeId },
+          data: { order: index },
+        }),
+      ),
+    );
+  }
+
   private hasValidImageHeader(data: Buffer, mimeType: string): boolean {
     if (data.length < 4) return false;
 
