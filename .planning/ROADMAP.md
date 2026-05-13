@@ -57,7 +57,7 @@ Plans:
 Plans:
 
 - [x] 02-01-PLAN.md — Prisma RecipeImage model, migration with data backfill, StorageAdapter extension, @dnd-kit install
-- [ ] 02-02-PLAN.md — API routes (multi-upload, binary GET, DELETE, PATCH reorder) + recipe list/detail image projection
+- [x] 02-02-PLAN.md — API routes (multi-upload, binary GET, DELETE, PATCH reorder) + recipe list/detail image projection
 - [ ] 02-03-PLAN.md — TanStack Query hooks for image fetch/upload/delete/reorder + Recipe interface extension
 - [ ] 02-04-PLAN.md — ImageGallery component (hero + clickable thumbnail strip + empty state) wired into detail page
 - [ ] 02-05-PLAN.md — ImageUploadZone + SortableThumbnailStrip (DnD reorder + delete) wired into edit page
