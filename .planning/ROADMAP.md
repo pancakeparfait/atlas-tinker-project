@@ -52,11 +52,16 @@ Plans:
 3. User can remove individual images without deleting entire recipe
 4. User can reorder images and set featured/primary image
 5. Recipe list shows primary image thumbnail for each recipe
-   **Plans**: TBD
+   **Plans**: 6 plans
 
 Plans:
 
-- TBD (will be created during phase planning)
+- [ ] 02-01-PLAN.md — Prisma RecipeImage model, migration with data backfill, StorageAdapter extension, @dnd-kit install
+- [ ] 02-02-PLAN.md — API routes (multi-upload, binary GET, DELETE, PATCH reorder) + recipe list/detail image projection
+- [ ] 02-03-PLAN.md — TanStack Query hooks for image fetch/upload/delete/reorder + Recipe interface extension
+- [ ] 02-04-PLAN.md — ImageGallery component (hero + clickable thumbnail strip + empty state) wired into detail page
+- [ ] 02-05-PLAN.md — ImageUploadZone + SortableThumbnailStrip (DnD reorder + delete) wired into edit page
+- [ ] 02-06-PLAN.md — Recipe list/grid primary thumbnail with Utensils placeholder
 
 ### Phase 3: Meal Planning Calendar
 
@@ -106,11 +111,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase                       | Plans Complete | Status      | Completed |
 | --------------------------- | -------------- | ----------- | --------- |
 | 1. Fraction Display         | 0/TBD          | Not started | -         |
-| 2. Multi-Image Support      | 0/TBD          | Not started | -         |
+| 2. Multi-Image Support      | 0/6            | Not started | -         |
 | 3. Meal Planning Calendar   | 0/TBD          | Not started | -         |
 | 4. Shopping List Generation | 0/TBD          | Not started | -         |
 
 ---
 
 _Roadmap created: 2026-02-18_
-_Last updated: 2026-02-18_
+_Last updated: 2026-05-13 after Phase 2 planning_

@@ -589,17 +589,17 @@ export function useReorderRecipeImages() { /* ... similar pattern */ }
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should old `recipes.image_data` columns be dropped in this migration or a follow-up?**
    - What we know: Columns are nullable and unused after migration. Keeping them costs storage.
    - What's unclear: Whether any code path still reads `imageData` from the recipe object directly.
-   - Recommendation: Leave columns in place for this phase. Add a cleanup migration task to a follow-up.
+   - **RESOLVED:** Leave columns in place for this phase. Add a cleanup migration task to a follow-up. (Phase 2 plans 01/02/04 reference this resolution as Assumption A1 / Open Question 1 (RESOLVED).)
 
 2. **Max image count per recipe?**
    - What we know: CONTEXT.md mentions validation but does not set a cap.
    - What's unclear: Whether there's a business-logic cap (e.g., 10 images max).
-   - Recommendation: Default to no hard cap in code, but document the question for the user. Can add a configurable constant to `IMAGE_CONFIG`.
+   - **RESOLVED:** Default to no hard cap in code for Phase 2. Plan 02-02 threat T-02-10 records the deferral. A configurable cap can be added to `IMAGE_CONFIG` in a future phase if abuse becomes a concern.
 
 ---
 
