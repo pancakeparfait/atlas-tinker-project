@@ -42,6 +42,11 @@ export async function GET(
             ingredient: true,
           },
         },
+        // Phase 2: metadata-only image list sorted by order (no bytes).
+        images: {
+          orderBy: { order: 'asc' },
+          select: { id: true, order: true, fileName: true, mimeType: true },
+        },
       },
     });
 
