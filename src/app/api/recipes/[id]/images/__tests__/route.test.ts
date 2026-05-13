@@ -13,6 +13,9 @@ jest.mock('@/lib/storage', () => ({
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    recipe: {
+      findUnique: jest.fn(),
+    },
     recipeImage: {
       aggregate: jest.fn(),
       findFirst: jest.fn(),
@@ -27,11 +30,13 @@ jest.mock('@/lib/prisma', () => ({
 import { GET, POST } from '../route';
 import { storageAdapter } from '@/lib/storage';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 const listRecipeImages = storageAdapter.listRecipeImages as jest.Mock;
 const validateImage = storageAdapter.validateImage as jest.Mock;
 const saveRecipeImage = storageAdapter.saveRecipeImage as jest.Mock;
 const aggregate = prisma.recipeImage.aggregate as unknown as jest.Mock;
+const findUnique = prisma.recipe.findUnique as unknown as jest.Mock;
 
 function makeRequest(files: File[]): NextRequest {
   const formData = new FormData();
@@ -49,6 +54,9 @@ const ctx = { params: Promise.resolve({ id: 'r1' }) };
 describe('POST /api/recipes/[id]/images', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // WR-08: default findUnique to a real recipe; tests that want the 404
+    // path override this explicitly.
+    findUnique.mockResolvedValue({ id: 'r1' });
   });
 
   // Test A — happy path multi-file
@@ -170,5 +178,34 @@ describe('POST /api/recipes/[id]/images', () => {
     const secondOrder = saveRecipeImage.mock.calls[1][3];
     expect(firstOrder).toBe(0);
     expect(secondOrder).toBe(0); // accepted duplicate per T-02-12
+  });
+
+  // WR-08 Test H — bogus recipe id returns 404 (not 500)
+  it('H: returns 404 when the parent recipe does not exist', async () => {
+    findUnique.mockResolvedValue(null);
+    const f = new File(['x'], 'x.jpg', { type: 'image/jpeg' });
+    const res = await POST(makeRequest([f]), ctx);
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('Recipe not found');
+    expect(saveRecipeImage).not.toHaveBeenCalled();
+  });
+
+  // WR-08 Test I — race: recipe deleted after existence check, surfaces as 404
+  it('I: maps Prisma P2003 (foreign-key violation) to 404', async () => {
+    aggregate.mockResolvedValue({ _max: { order: -1 } });
+    validateImage.mockResolvedValue({ isValid: true, errors: [] });
+    const p2003 = new Prisma.PrismaClientKnownRequestError(
+      'Foreign key constraint failed on the field: recipeId',
+      { code: 'P2003', clientVersion: 'test' }
+    );
+    saveRecipeImage.mockRejectedValue(p2003);
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const f = new File(['x'], 'x.jpg', { type: 'image/jpeg' });
+    const res = await POST(makeRequest([f]), ctx);
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('Recipe not found');
+    errSpy.mockRestore();
   });
 });

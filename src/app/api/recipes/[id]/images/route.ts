@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storageAdapter } from '@/lib/storage';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(
   request: NextRequest,
@@ -44,6 +45,21 @@ export async function POST(
       return NextResponse.json(
         { error: 'No image files provided' },
         { status: 400 }
+      );
+    }
+
+    // WR-08: confirm the parent recipe exists before writing into
+    // recipe_images. Without this, a bogus recipe id surfaces as a generic
+    // 500 (from the P2003 foreign-key violation in saveRecipeImage). 404 is
+    // the correct surface here and matches the DELETE handler.
+    const recipe = await prisma.recipe.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!recipe) {
+      return NextResponse.json(
+        { error: 'Recipe not found' },
+        { status: 404 }
       );
     }
 
@@ -86,6 +102,20 @@ export async function POST(
   } catch (error) {
     const { id } = await params;
     console.error(`POST /api/recipes/${id}/images error:`, error);
+
+    // WR-08: defense-in-depth — if the recipe is deleted between our
+    // existence check and the insert, Prisma raises P2003 (foreign-key
+    // violation). Surface that as 404 rather than a generic 500.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
+      return NextResponse.json(
+        { error: 'Recipe not found' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to upload images' },
       { status: 500 }
