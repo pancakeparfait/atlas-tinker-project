@@ -63,7 +63,10 @@ test-results.log
 # pnpm-lock.yaml
 
 # IDE specific
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/commands/
+!.claude/agents/
 .vscode/settings.json
 .vscode/extensions.json
 .vscode/launch.json
