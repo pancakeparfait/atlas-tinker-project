@@ -38,6 +38,7 @@ model Recipe {
   // Relations
   ingredients       RecipeIngredient[]
   plannedMeals      PlannedMeal[]
+  images            RecipeImage[]
 
   @@map("recipes")
 }
@@ -73,6 +74,22 @@ model RecipeIngredient {
   ingredient Ingredient @relation(fields: [ingredientId], references: [id])
 
   @@map("recipe_ingredients")
+}
+
+model RecipeImage {
+  id        String   @id @default(cuid())
+  recipeId  String   @map("recipe_id")
+  order     Int
+  mimeType  String   @map("mime_type")
+  data      Bytes
+  fileName  String   @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId, order])
+  @@map("recipe_images")
 }
 
 model MealPlan {
