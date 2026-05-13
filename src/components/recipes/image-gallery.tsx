@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,22 @@ export function ImageGallery({ recipeId, recipeTitle, images }: ImageGalleryProp
   // We MUST call useState unconditionally (Rules of Hooks). Initialize with the
   // first image id when present; the empty-state branch ignores selectedId.
   const [selectedId, setSelectedId] = useState<string>(sorted[0]?.id ?? '');
+
+  // WR-06: explicitly resync selectedId when the images prop changes (e.g. a
+  // sibling SortableThumbnailStrip deletes the active image). Without this,
+  // the Math.max(0, findIndex) fallback below silently snaps to the first
+  // image — sensible behavior, but invisible from state and brittle to
+  // future conditional refactors. The effect is a no-op while selectedId is
+  // still valid, so re-renders from unrelated parent state don't churn it.
+  useEffect(() => {
+    if (sorted.length === 0) {
+      if (selectedId !== '') setSelectedId('');
+      return;
+    }
+    if (!sorted.some((i) => i.id === selectedId)) {
+      setSelectedId(sorted[0].id);
+    }
+  }, [sorted, selectedId]);
 
   if (sorted.length === 0) {
     return (
