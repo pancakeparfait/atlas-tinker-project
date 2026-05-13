@@ -59,9 +59,9 @@ Plans:
 - [x] 02-01-PLAN.md — Prisma RecipeImage model, migration with data backfill, StorageAdapter extension, @dnd-kit install
 - [x] 02-02-PLAN.md — API routes (multi-upload, binary GET, DELETE, PATCH reorder) + recipe list/detail image projection
 - [x] 02-03-PLAN.md — TanStack Query hooks for image fetch/upload/delete/reorder + Recipe interface extension
-- [ ] 02-04-PLAN.md — ImageGallery component (hero + clickable thumbnail strip + empty state) wired into detail page
-- [ ] 02-05-PLAN.md — ImageUploadZone + SortableThumbnailStrip (DnD reorder + delete) wired into edit page
-- [ ] 02-06-PLAN.md — Recipe list/grid primary thumbnail with Utensils placeholder
+- [x] 02-04-PLAN.md — ImageGallery component (hero + clickable thumbnail strip + empty state) wired into detail page
+- [x] 02-05-PLAN.md — ImageUploadZone + SortableThumbnailStrip (DnD reorder + delete) wired into edit page
+- [x] 02-06-PLAN.md — Recipe list/grid primary thumbnail with Utensils placeholder
 
 ### Phase 3: Meal Planning Calendar
 
