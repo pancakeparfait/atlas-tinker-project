@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRecipe, useDeleteRecipe } from '@/lib/queries/recipe-queries';
 import { MEAL_CATEGORIES, DIFFICULTY_LEVELS } from '@/components/recipes/recipe-form-schema';
 import { formatQuantityAsFraction } from '@/lib/utils';
-import Image from 'next/image';
+import { ImageGallery } from '@/components/recipes/image-gallery';
 
 export default function RecipeDetailPage() {
   const params = useParams();
@@ -156,17 +156,8 @@ export default function RecipeDetailPage() {
 
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-6">
-        {recipe.imageUrl && (
-          <div className="relative w-full h-64 md:h-96 rounded-lg overflow-hidden mb-6">
-            <Image
-              src={`/api/recipes/${recipe.id}/image`}
-              alt={recipe.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-        )}
+        <ImageGallery recipeId={recipe.id} recipeTitle={recipe.title} images={recipe.images ?? []} />
+
 
         {/* Title and Metadata */}
         <div className="mb-6 space-y-4">

@@ -17,6 +17,13 @@ jest.mock('@/lib/queries/recipe-queries', () => ({
   useDeleteRecipe: jest.fn(),
 }));
 
+// Mock ImageGallery — page test exercises wiring only, not gallery internals
+jest.mock('@/components/recipes/image-gallery', () => ({
+  ImageGallery: (props: { images?: Array<{ id: string }> }) => (
+    <div data-testid="image-gallery" data-image-count={props.images?.length ?? 0} />
+  ),
+}));
+
 // Mock Next.js Image component
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -44,6 +51,11 @@ const mockRecipeComplete = {
   personalRating: 5,
   isDraft: false,
   imageUrl: 'http://example.com/image.jpg',
+  images: [
+    { id: 'img-1', order: 0, fileName: 'cookies-1.jpg', mimeType: 'image/jpeg' },
+    { id: 'img-2', order: 1, fileName: 'cookies-2.jpg', mimeType: 'image/jpeg' },
+  ],
+  primaryImageId: 'img-1',
   tags: ['dessert', 'baking', 'cookies'],
   source: 'Sally\'s Baking Addiction',
   sourceUrl: 'https://example.com/recipe',
@@ -378,7 +390,7 @@ describe('RecipeDetailPage', () => {
       expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
-    it('displays recipe image when present', () => {
+    it('renders ImageGallery with images array', () => {
       (useRecipe as jest.Mock).mockReturnValue({
         data: mockRecipeComplete,
         isLoading: false,
@@ -387,9 +399,35 @@ describe('RecipeDetailPage', () => {
 
       render(<RecipeDetailPage />);
 
-      const image = screen.getByAltText('Chocolate Chip Cookies');
-      expect(image).toBeInTheDocument();
-      expect(image).toHaveAttribute('src', expect.stringContaining('/api/recipes/recipe-1/image'));
+      const gallery = screen.getByTestId('image-gallery');
+      expect(gallery).toBeInTheDocument();
+      expect(gallery).toHaveAttribute('data-image-count', '2');
+    });
+
+    it('renders ImageGallery with empty array when recipe has no images', () => {
+      (useRecipe as jest.Mock).mockReturnValue({
+        data: { ...mockRecipeComplete, images: [], primaryImageId: null },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<RecipeDetailPage />);
+
+      const gallery = screen.getByTestId('image-gallery');
+      expect(gallery).toHaveAttribute('data-image-count', '0');
+    });
+
+    it('renders ImageGallery with empty array when images field is undefined', () => {
+      (useRecipe as jest.Mock).mockReturnValue({
+        data: { ...mockRecipeComplete, images: undefined, primaryImageId: null },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<RecipeDetailPage />);
+
+      const gallery = screen.getByTestId('image-gallery');
+      expect(gallery).toHaveAttribute('data-image-count', '0');
     });
 
     it('shows draft badge for draft recipes', () => {
