@@ -246,7 +246,13 @@ export function useDeleteRecipe() {
   });
 }
 
-export function useUploadRecipeImage() {
+// WR-03: legacy single-image hooks. Renamed from useUploadRecipeImage /
+// useDeleteRecipeImage to avoid an auto-import collision with the Phase 2
+// multi-image hooks in recipe-image-queries.ts. The new module's hooks
+// (useUploadRecipeImages / useDeleteRecipeImage there) have incompatible
+// call signatures, so the collision was a foot-gun — VSCode would happily
+// pick either based on alphabetical order.
+export function useUploadLegacyRecipeImage() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -259,7 +265,7 @@ export function useUploadRecipeImage() {
   });
 }
 
-export function useDeleteRecipeImage() {
+export function useDeleteLegacyRecipeImage() {
   const queryClient = useQueryClient();
 
   return useMutation({
