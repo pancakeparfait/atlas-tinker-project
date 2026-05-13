@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Filter, Clock, Users, Star } from 'lucide-react';
+import { Plus, Search, Filter, Clock, Users, Star, Utensils } from 'lucide-react';
+import Image from 'next/image';
 import { useRecipes, type Recipe } from '@/lib/queries/recipe-queries';
 import { MEAL_CATEGORIES } from '@/components/recipes/recipe-form-schema';
 
@@ -154,6 +155,22 @@ export default function RecipesPage() {
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => handleRecipeClick(recipe)}
             >
+              {recipe.primaryImageId ? (
+                <Image
+                  src={`/api/recipes/${recipe.id}/images/${recipe.primaryImageId}`}
+                  alt={recipe.title}
+                  width={160}
+                  height={120}
+                  className="w-full h-30 object-cover rounded-t-lg"
+                />
+              ) : (
+                <div
+                  className="w-full h-30 bg-secondary rounded-t-lg flex items-center justify-center"
+                  aria-label={`No photo for ${recipe.title}`}
+                >
+                  <Utensils className="h-8 w-8 text-muted-foreground" aria-hidden />
+                </div>
+              )}
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-2">{recipe.title}</CardTitle>
