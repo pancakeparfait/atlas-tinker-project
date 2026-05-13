@@ -1,0 +1,92 @@
+---
+phase: 02-multi-image-support
+verified: 2026-05-13
+status: human_needed
+goal: "Users can document recipes with multiple images showing ingredients, process, and final dish"
+must_haves_total: 7
+must_haves_passed: 7
+must_haves_failed: 0
+test_suite:
+  total: 180
+  passing: 180
+  failing: 0
+  suites: 15
+type_check: clean
+code_review_status: issues_found
+code_review_blockers: 4
+human_verification_items: 6
+---
+
+# Phase 2: Multi-Image Support — Verification Report
+
+**Verdict:** human_needed — all automated evidence checks pass and 180/180 tests are green, but four BLOCKER-class code review findings touch production behavior and no human has smoke-tested the end-to-end UI flows. Phase stays pending until human acceptance items are resolved (or explicitly waived).
+
+## Requirement Coverage
+
+| ID | Requirement | Evidence | Status |
+|------|---------|---------|--------|
+| IMG-01 | Upload multiple images per recipe | `DatabaseStorageAdapter.uploadImages` (`src/lib/storage/database-adapter.ts:113`) + `POST /api/recipes/[id]/images` + `ImageUploadZone` client component | PASS |
+| IMG-02 | Detail page displays all images | `ImageGallery` rendered at `src/app/recipes/[id]/page.tsx:159` | PASS |
+| IMG-03 | Remove individual images | `DELETE /api/recipes/[id]/images/[imageId]` + `useDeleteRecipeImage` hook + `SortableThumbnailStrip` per-thumbnail delete with `window.confirm` | PASS |
+| IMG-04 | Reorder images / set primary | `PATCH /api/recipes/[id]/images/reorder` + `useReorderRecipeImages` hook + `SortableThumbnailStrip` with `@dnd-kit` `SortableContext` | PASS |
+| IMG-05 | Images persist in database | `prisma/migrations/20260513174137_add_recipe_images/migration.sql` creates `recipe_images` table and backfills existing `imageData` rows | PASS |
+| IMG-06 | Validate type + size (10 MB max) | `IMAGE_CONFIG.maxSizeBytes = 10 * 1024 * 1024` and `IMAGE_CONFIG.allowedMimeTypes` enforced server-side in `database-adapter.ts:76-86` and client-side in `image-upload-zone.tsx:24-29` | PASS |
+| IMG-07 | List shows primary thumbnail | `src/app/recipes/page.tsx` renders `<Image src="/api/recipes/[id]/images/[primaryImageId]">` or `<Utensils>` placeholder per Card | PASS |
+
+## Phase Success Criteria (from ROADMAP)
+
+1. **User can upload multiple images to a single recipe** — IMG-01 ✓
+2. **Recipe detail page displays all uploaded images** — IMG-02 ✓
+3. **User can remove individual images without deleting entire recipe** — IMG-03 ✓
+4. **User can reorder images and set featured/primary image** — IMG-04 ✓ (primary is always order=0 per Decision D-IMG-PRIMARY in CONTEXT.md)
+5. **Recipe list shows primary image thumbnail for each recipe** — IMG-07 ✓
+
+## Automated Evidence
+
+- `npm test`: 180/180 passing across 15 test suites
+- `npm run type-check` (`tsc --noEmit`): clean
+- 69 new tests added in phase 2 (baseline 111 → final 180)
+- TDD gate (RED → GREEN per task) observed in commit history for all 6 plans
+
+## Code Review (from 02-REVIEW.md)
+
+Four BLOCKER findings touch production behavior — see `.planning/phases/02-multi-image-support/02-REVIEW.md`:
+
+- **CR-01** `prisma/migrations/20260513174137_add_recipe_images/migration.sql:21-31` — INSERT references `image_mime_type` without a NULL guard. Prior schema allowed `image_mime_type IS NULL` while `image_data IS NOT NULL`. Any such row aborts the migration with a NOT NULL constraint violation.
+- **CR-02** `src/app/api/recipes/route.ts:82-99` and `src/app/api/recipes/[id]/route.ts:37-51` — `include` rather than `select`/`omit` causes the legacy `imageData` BLOB to be serialized into every list/detail JSON response. Multi-MB list payloads + duplicate data exposure.
+- **CR-03** `src/components/recipes/image-upload-zone.tsx:60-67` — the server returns `{imageIds, failed[]}` but the client marks every uploaded row as `done`. Failed uploads display green checks.
+- **CR-04** `src/app/api/recipes/[id]/images/reorder/route.ts:22-31` — only validates JSON shape. A subset of imageIds silently leaves duplicate `order` values; a foreign id returns 500 instead of 404/400. Adapter relies on full-set assumption.
+
+These do not block goal verification per workflow (review is advisory), but they DO affect runtime correctness. Options:
+- `/gsd-code-review 2 --fix` to auto-apply remediation
+- `/gsd-plan-phase 2 --gaps` to create gap-closure plans for the blockers
+- Address inline and re-run verification
+
+## Human Verification Items
+
+The following surfaces have unit/integration tests but have NOT been exercised by a human in a real browser. Items persist as `02-HUMAN-UAT.md` and surface in `/gsd-progress` / `/gsd-audit-uat` until verified.
+
+### 1. Upload multiple files via drag-drop
+expected: Navigate to `/recipes/[id]/edit`, drag 2–4 image files (mixed valid + an oversized or wrong-MIME file) onto the upload zone. Valid files upload; rejected files show the inline error rows ("Photo must be under 10MB" or "Only JPEG, PNG, WebP, and GIF are supported"). The thumbnail strip below repopulates with the uploaded images. (Note CR-03 — currently all uploaded rows show "done" even if the server rejected them mid-batch.)
+
+### 2. Empty state on detail page
+expected: Navigate to a recipe with no images. The gallery renders "No photos yet" heading with the body copy "Add photos to help others follow along with ingredients, process, and the finished dish." and an ImageOff icon.
+
+### 3. Hero swap on thumbnail click
+expected: Open a recipe with multiple images. The hero shows the order=0 image with "Primary" badge on its thumbnail. Click another thumbnail — hero swaps without a page reload; the active thumbnail picks up the `ring-2 ring-primary` outline.
+
+### 4. Drag-to-reorder on edit page
+expected: On `/recipes/[id]/edit` with 3+ images, drag a thumbnail to a new position via the GripVertical handle. The new order persists across page reload. The image at order=0 becomes the primary thumbnail on the list page.
+
+### 5. Per-thumbnail delete with confirm
+expected: On the edit page, click a thumbnail's Trash2 icon. `window.confirm("Remove this photo from the recipe?")` appears. Confirming removes the image and renormalizes order on the server. The recipe list and detail views update after navigation.
+
+### 6. Recipe list thumbnails
+expected: Navigate to `/recipes`. Each Card shows either a 160×120 primary thumbnail above the title, or a Utensils icon placeholder on the secondary background for recipes without `primaryImageId`. Click-through to detail still works.
+
+## Notes for follow-up
+
+- CR-01 / CR-02 are production-affecting and should be remediated before this phase is shipped.
+- CR-03 / CR-04 affect UX correctness and edge-case integrity respectively.
+- All 4 review blockers have specific file:line references; `/gsd-code-review 2 --fix` is the recommended path.
+- Phase 1 (Fraction Display) did not produce a VERIFICATION.md; no prior-phase regression suite was available to run as a regression gate for this phase.
