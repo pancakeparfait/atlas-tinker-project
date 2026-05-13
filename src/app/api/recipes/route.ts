@@ -114,8 +114,21 @@ export async function GET(request: NextRequest) {
 
       // Project the order=0 image id to primaryImageId and drop the raw
       // images array so list responses never carry image bytes (T-02-11).
-      const { images: _images, ...rest } = recipe as typeof recipe & {
+      // CR-02: also strip the legacy single-image BLOB columns (imageData,
+      // imageMimeType, imageFileName). Prisma returns them by default with
+      // `include`, which would ship multi-MB base64 bytes per recipe in
+      // every list response.
+      const {
+        images: _images,
+        imageData: _imageData,
+        imageMimeType: _imageMimeType,
+        imageFileName: _imageFileName,
+        ...rest
+      } = recipe as typeof recipe & {
         images?: Array<{ id: string }>;
+        imageData?: Buffer | null;
+        imageMimeType?: string | null;
+        imageFileName?: string | null;
       };
       const primaryImageId = _images?.[0]?.id ?? null;
 

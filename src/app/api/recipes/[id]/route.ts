@@ -71,8 +71,22 @@ export async function GET(
       });
     }
 
+    // CR-02: strip the legacy single-image BLOB columns. Phase 2's data
+    // migration has copied these bytes into recipe_images; the JSON detail
+    // response must not ship the raw blob.
+    const {
+      imageData: _imageData,
+      imageMimeType: _imageMimeType,
+      imageFileName: _imageFileName,
+      ...rest
+    } = recipe as typeof recipe & {
+      imageData?: Buffer | null;
+      imageMimeType?: string | null;
+      imageFileName?: string | null;
+    };
+
     const serializedRecipe = {
-      ...recipe,
+      ...rest,
       instructions: instructionsArray,
       createdAt: recipe.createdAt.toISOString(),
       updatedAt: recipe.updatedAt.toISOString(),
