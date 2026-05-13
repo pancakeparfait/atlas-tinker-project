@@ -88,6 +88,8 @@ export async function GET(request: NextRequest) {
               ingredient: true,
             },
           },
+          // Phase 2: surface only the primary image id (order=0) — no bytes.
+          images: { where: { order: 0 }, take: 1, select: { id: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -109,9 +111,16 @@ export async function GET(request: NextRequest) {
           return String(inst);
         });
       }
-      
+
+      // Project the order=0 image id to primaryImageId and drop the raw
+      // images array so list responses never carry image bytes (T-02-11).
+      const { images: _images, ...rest } = recipe as typeof recipe & {
+        images?: Array<{ id: string }>;
+      };
+      const primaryImageId = _images?.[0]?.id ?? null;
+
       return {
-        ...recipe,
+        ...rest,
         instructions: instructionsArray,
         createdAt: recipe.createdAt.toISOString(),
         updatedAt: recipe.updatedAt.toISOString(),
@@ -122,6 +131,7 @@ export async function GET(request: NextRequest) {
             createdAt: ri.ingredient.createdAt.toISOString(),
           },
         })),
+        primaryImageId,
       };
     });
 
