@@ -101,4 +101,28 @@ describe('GET /api/recipes (list) — primaryImageId projection', () => {
     });
     expect(JSON.stringify(arg.include)).not.toMatch(/"data":/);
   });
+
+  // CR-02 — list response must not leak the legacy imageData blob
+  it('D4: list response strips legacy imageData/imageMimeType/imageFileName', async () => {
+    findMany.mockResolvedValue([
+      baseRecipe({
+        id: 'r1',
+        // Simulate a row that still carries the legacy blob columns.
+        imageData: Buffer.from('legacy blob bytes'),
+        imageMimeType: 'image/jpeg',
+        imageFileName: 'legacy.jpg',
+        images: [{ id: 'img-primary' }],
+      }),
+    ]);
+    count.mockResolvedValue(1);
+    const req = new NextRequest('http://test/api/recipes');
+    const res = await GET(req);
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toMatch(/"imageData"/);
+    expect(serialized).not.toMatch(/"imageMimeType"/);
+    expect(serialized).not.toMatch(/"imageFileName"/);
+    // The new multi-image projection is still present.
+    expect(body.recipes[0].primaryImageId).toBe('img-primary');
+  });
 });

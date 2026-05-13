@@ -99,4 +99,41 @@ describe('GET /api/recipes/[id] — images array projection', () => {
     });
     expect(JSON.stringify(body)).not.toMatch(/"data":/);
   });
+
+  // WR-05 — 404 exercises the new include shape (covers the missing-recipe path)
+  it('E3: returns 404 when recipe does not exist (covers Phase 2 include path)', async () => {
+    findUnique.mockResolvedValue(null);
+    const req = new NextRequest('http://test/api/recipes/missing');
+    const res = await GET(req, { params: Promise.resolve({ id: 'missing' }) });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('Recipe not found');
+    // confirm the new include shape was attempted on findUnique
+    expect(findUnique.mock.calls[0][0].include.images).toBeDefined();
+  });
+
+  // CR-02 — detail response must not leak the legacy imageData blob
+  it('E4: detail response strips legacy imageData/imageMimeType/imageFileName', async () => {
+    findUnique.mockResolvedValue(
+      baseRecipe({
+        // Simulate a row that still carries the legacy blob columns (e.g.
+        // before they are eventually dropped from the schema).
+        imageData: Buffer.from('legacy blob bytes'),
+        imageMimeType: 'image/jpeg',
+        imageFileName: 'legacy.jpg',
+        images: [
+          { id: 'a', order: 0, fileName: 'a.jpg', mimeType: 'image/jpeg' },
+        ],
+      })
+    );
+    const req = new NextRequest('http://test/api/recipes/r1');
+    const res = await GET(req, { params: Promise.resolve({ id: 'r1' }) });
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toMatch(/"imageData"/);
+    expect(serialized).not.toMatch(/"imageMimeType"/);
+    expect(serialized).not.toMatch(/"imageFileName"/);
+    // The new multi-image surface is still present.
+    expect(body.images).toHaveLength(1);
+  });
 });
