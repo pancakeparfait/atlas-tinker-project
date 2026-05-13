@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: multi-image-support
-status: draft
+status: approved
 shadcn_initialized: true
 preset: none
 created: 2026-05-13
+reviewed_at: 2026-05-13
 ---
 
 # Phase 2 — UI Design Contract
@@ -56,7 +57,7 @@ Pre-populated from existing usage in `src/app/recipes/[id]/page.tsx`. No new typ
 | Body | 16px | 400 | 1.5 |
 | Label | 14px | 400 | 1.4 |
 | Heading | 20px | 600 | 1.2 |
-| Display | 28px (md: 36px) | 700 | 1.1 |
+| Display | 28px (md: 36px) | 600 | 1.1 |
 
 Notes:
 - Upload zone instruction text uses Label (14px/400)
