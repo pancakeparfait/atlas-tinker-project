@@ -7,13 +7,14 @@ must_haves_total: 7
 must_haves_passed: 7
 must_haves_failed: 0
 test_suite:
-  total: 180
-  passing: 180
+  total: 189
+  passing: 189
   failing: 0
   suites: 15
 type_check: clean
-code_review_status: issues_found
-code_review_blockers: 4
+code_review_status: fixed
+code_review_blockers: 0
+code_review_fix_report: 02-REVIEW-FIX.md
 human_verification_items: 6
 ---
 
@@ -48,19 +49,17 @@ human_verification_items: 6
 - 69 new tests added in phase 2 (baseline 111 → final 180)
 - TDD gate (RED → GREEN per task) observed in commit history for all 6 plans
 
-## Code Review (from 02-REVIEW.md)
+## Code Review (resolved via 02-REVIEW-FIX.md)
 
-Four BLOCKER findings touch production behavior — see `.planning/phases/02-multi-image-support/02-REVIEW.md`:
+All 12 in-scope findings (4 critical + 8 warning) were fixed via `/gsd-code-review 2 --fix`. Full detail in `.planning/phases/02-multi-image-support/02-REVIEW-FIX.md`. Highlights:
 
-- **CR-01** `prisma/migrations/20260513174137_add_recipe_images/migration.sql:21-31` — INSERT references `image_mime_type` without a NULL guard. Prior schema allowed `image_mime_type IS NULL` while `image_data IS NOT NULL`. Any such row aborts the migration with a NOT NULL constraint violation.
-- **CR-02** `src/app/api/recipes/route.ts:82-99` and `src/app/api/recipes/[id]/route.ts:37-51` — `include` rather than `select`/`omit` causes the legacy `imageData` BLOB to be serialized into every list/detail JSON response. Multi-MB list payloads + duplicate data exposure.
-- **CR-03** `src/components/recipes/image-upload-zone.tsx:60-67` — the server returns `{imageIds, failed[]}` but the client marks every uploaded row as `done`. Failed uploads display green checks.
-- **CR-04** `src/app/api/recipes/[id]/images/reorder/route.ts:22-31` — only validates JSON shape. A subset of imageIds silently leaves duplicate `order` values; a foreign id returns 500 instead of 404/400. Adapter relies on full-set assumption.
+- **CR-01** RESOLVED (`b897d42`) — migration now guards `AND image_mime_type IS NOT NULL` in the data backfill INSERT.
+- **CR-02** RESOLVED (`1f2669d` + regression tests in `b67046c`) — legacy `imageData`, `imageMimeType`, `imageFileName` are destructured out of list/detail responses; D4/E4 tests lock the blob-strip contract.
+- **CR-03** RESOLVED (`36e4657`) — `ImageUploadZone` reads the server's `failed[]` array post-`mutateAsync` and flips rejected rows to `error` state (still flagged for human visual verification).
+- **CR-04** RESOLVED (`a4b2197`) — `/images/reorder` validates `orderedIds` as the exact image set and maps P2025 to 404.
+- WR-01..WR-08 all fixed across the same commit chain (`b897d42` through `5147d50`).
 
-These do not block goal verification per workflow (review is advisory), but they DO affect runtime correctness. Options:
-- `/gsd-code-review 2 --fix` to auto-apply remediation
-- `/gsd-plan-phase 2 --gaps` to create gap-closure plans for the blockers
-- Address inline and re-run verification
+Test suite grew 180 → 189 (+9 regression tests). Type-check clean. The 5 Info-level findings are out of `critical_warning` scope and remain open as quality items for follow-up.
 
 ## Human Verification Items
 
