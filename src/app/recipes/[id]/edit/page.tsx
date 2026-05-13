@@ -3,6 +3,8 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { RecipeForm } from '@/components/recipes/recipe-form';
+import { ImageUploadZone } from '@/components/recipes/image-upload-zone';
+import { SortableThumbnailStrip } from '@/components/recipes/sortable-thumbnail-strip';
 import { useRecipe } from '@/lib/queries/recipe-queries';
 import type { Recipe } from '@/lib/queries/recipe-queries';
 import { Button } from '@/components/ui/button';
@@ -82,6 +84,13 @@ export default function EditRecipePage() {
           </Button>
         </div>
         <h1 className="text-3xl font-bold mb-6">Edit Recipe</h1>
+        <section className="mb-8 space-y-4">
+          <h2 className="text-xl font-semibold">Photos</h2>
+          <ImageUploadZone recipeId={recipe.id} />
+          {recipe.images && recipe.images.length > 0 && (
+            <SortableThumbnailStrip recipeId={recipe.id} images={recipe.images} />
+          )}
+        </section>
         <RecipeForm recipe={recipe} onSuccess={handleSuccess} onCancel={handleCancel} />
       </div>
     </div>

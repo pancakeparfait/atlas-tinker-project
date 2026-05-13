@@ -28,6 +28,23 @@ jest.mock('@/lib/queries/import-queries', () => ({
   })),
 }));
 
+// Mock the two new image components — render testid-only stubs so we can verify
+// the edit page mounts them without importing @dnd-kit in this suite.
+jest.mock('@/components/recipes/image-upload-zone', () => ({
+  ImageUploadZone: (props: { recipeId: string }) => (
+    <div data-testid="upload-zone" data-recipe-id={props.recipeId} />
+  ),
+}));
+jest.mock('@/components/recipes/sortable-thumbnail-strip', () => ({
+  SortableThumbnailStrip: (props: { recipeId: string; images: Array<{ id: string }> }) => (
+    <div
+      data-testid="sortable-thumbnail-strip"
+      data-recipe-id={props.recipeId}
+      data-image-count={props.images.length}
+    />
+  ),
+}));
+
 // Test data fixtures
 const mockRecipeComplete = {
   id: 'recipe-1',
@@ -761,6 +778,58 @@ describe('EditRecipePage', () => {
       render(<EditRecipePage />);
 
       expect(useRecipe).toHaveBeenCalledWith('recipe-xyz');
+    });
+  });
+
+  describe('Photo Section (Phase 02 — multi-image)', () => {
+    const recipeWithOneImage = {
+      ...mockRecipeComplete,
+      images: [
+        { id: 'img-a', order: 0, fileName: 'a.jpg', mimeType: 'image/jpeg' },
+      ],
+    };
+
+    it('A — mounts ImageUploadZone and SortableThumbnailStrip when recipe.images is non-empty', () => {
+      (useRecipe as jest.Mock).mockReturnValue({
+        data: recipeWithOneImage,
+        isLoading: false,
+        error: null,
+      });
+
+      render(<EditRecipePage />);
+
+      const uploadZone = screen.getByTestId('upload-zone');
+      expect(uploadZone).toBeInTheDocument();
+      expect(uploadZone.getAttribute('data-recipe-id')).toBe('recipe-1');
+
+      const strip = screen.getByTestId('sortable-thumbnail-strip');
+      expect(strip).toBeInTheDocument();
+      expect(strip.getAttribute('data-image-count')).toBe('1');
+    });
+
+    it('B — omits SortableThumbnailStrip when recipe has no images (upload zone still present)', () => {
+      (useRecipe as jest.Mock).mockReturnValue({
+        data: { ...mockRecipeComplete, images: [] },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<EditRecipePage />);
+
+      expect(screen.getByTestId('upload-zone')).toBeInTheDocument();
+      expect(screen.queryByTestId('sortable-thumbnail-strip')).not.toBeInTheDocument();
+    });
+
+    it('C — renders a Photos h2 heading above the upload zone', () => {
+      (useRecipe as jest.Mock).mockReturnValue({
+        data: recipeWithOneImage,
+        isLoading: false,
+        error: null,
+      });
+
+      render(<EditRecipePage />);
+
+      expect(screen.getByRole('heading', { level: 2, name: 'Photos' })).toBeInTheDocument();
     });
   });
 
