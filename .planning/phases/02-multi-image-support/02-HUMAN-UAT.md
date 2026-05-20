@@ -22,9 +22,8 @@ result: pass
 
 ### 3. Hero swap on thumbnail click
 expected: Open a recipe with multiple images. The hero shows the order=0 image with "Primary" badge on its thumbnail. Click another thumbnail — hero swaps without a page reload; the active thumbnail picks up the `ring-2 ring-primary` outline.
-result: issue
-reported: "on the detail page, when clicking another image, primary stays the same, though the displayed hero changes"
-severity: minor
+result: pass
+note: "User initially observed 'primary stays the same, though the displayed hero changes' — confirmed as spec-compliant: the 'Primary' badge marks the order=0 image, not the displayed hero; the ring-2 ring-primary outline tracks the displayed thumbnail."
 
 ### 4. Drag-to-reorder on edit page
 expected: On `/recipes/[id]/edit` with 3+ images, drag a thumbnail to a new position via the GripVertical handle. The new order persists across page reload. The image at order=0 becomes the primary thumbnail on the list page.
@@ -41,18 +40,12 @@ result: pass
 ## Summary
 
 total: 6
-passed: 5
-issues: 1
+passed: 6
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "On detail page, clicking a thumbnail swaps the hero and the active thumbnail picks up the `ring-2 ring-primary` outline; the 'Primary' badge marks the order=0 image (unchanged by click)."
-  status: failed
-  reason: "User reported: on the detail page, when clicking another image, primary stays the same, though the displayed hero changes"
-  severity: minor
-  test: 3
-  artifacts: []
-  missing: []
+[none]
