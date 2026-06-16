@@ -77,11 +77,14 @@ Plans:
 5. User can view recipe details directly from calendar meal slot
 6. User can edit or remove recipes and notes from meal slots
 7. Meal plan data persists across browser sessions
-   **Plans**: TBD
+   **Plans**: 4 plans
 
 Plans:
 
-- TBD (will be created during phase planning)
+- [ ] 03-01-PLAN.md — Database & API foundation (schema update, meal plan/planned meal CRUD, query hooks)
+- [ ] 03-02-PLAN.md — Calendar UI core (page, grid, slots, navigation)
+- [ ] 03-03-PLAN.md — Recipe assignment (picker modal, multi-select, notes, remove actions)
+- [ ] 03-04-PLAN.md — Recipe preview & polish (popover, meal plan selector, visual polish)
 
 ### Phase 4: Shopping List Generation
 
