@@ -320,3 +320,19 @@ See `.github/copilot-instructions.md` for comprehensive patterns including:
 - Zod schema patterns
 - Docker database setup
 - Phase 1 scope and future phases
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context. See `docs/agents/domain.md`.
