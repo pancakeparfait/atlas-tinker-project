@@ -78,3 +78,6 @@ playwright-mcp-output/
 
 # Planning files (optional - change if you want to track these)
 # .planning/
+
+# Omo session state
+.omo/
