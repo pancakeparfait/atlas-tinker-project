@@ -2,6 +2,24 @@ import { Prisma, PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+function addUtcDays(date: Date, days: number): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + days
+    )
+  )
+}
+
+function currentWeekMonday(): Date {
+  const now = new Date()
+  const daysSinceMonday = (now.getDay() + 6) % 7
+  return new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday)
+  )
+}
+
 async function main() {
   console.log('🌱 Seeding database...')
 
@@ -195,26 +213,28 @@ async function seedSampleData(tx: Prisma.TransactionClient) {
 
   console.log(`✅ Created sample recipe: ${recipe.title}`)
 
-  // Create a sample meal plan
+  // Create a sample meal plan for the current week
+  const weekMonday = currentWeekMonday()
+  const planStart = addUtcDays(weekMonday, 1)
   const mealPlan = await tx.mealPlan.create({
     data: {
       name: 'Weekly Meal Plan - Week 1',
-      startDate: new Date('2025-11-18'),
-      endDate: new Date('2025-11-24'),
+      startDate: planStart,
+      endDate: addUtcDays(weekMonday, 7),
       budgetLimit: 150.00,
       notes: 'Focus on healthy, simple meals this week',
       plannedMeals: {
         create: [
           {
             recipeId: recipe.id,
-            mealDate: new Date('2025-11-18'),
+            mealDate: planStart,
             mealType: 'DINNER',
             servingsPlanned: 4,
             notes: 'Meal prep for the week'
           },
           {
             recipeId: recipe.id,
-            mealDate: new Date('2025-11-19'),
+            mealDate: addUtcDays(weekMonday, 2),
             mealType: 'LUNCH',
             servingsPlanned: 2,
             notes: 'Leftover from Monday dinner'
