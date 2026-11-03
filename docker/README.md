@@ -5,17 +5,20 @@
 Start the PostgreSQL database for local development:
 
 ```bash
+# One command: DB + migrations + seed + Next.js dev server (from repo root)
+pnpm dev:all
+
 # Start just the database
-docker-compose up -d postgres
+docker compose up -d postgres
 
 # Or start all services (database + pgAdmin)
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f postgres
+docker compose logs -f postgres
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ## Services
@@ -59,9 +62,9 @@ sudo systemctl stop postgresql
 ### Reset Database
 To start fresh:
 ```bash
-docker-compose down -v  # Removes volumes
-docker-compose up -d postgres
-pnpm db:migrate
+docker compose down -v  # Removes volumes
+pnpm db:up
+pnpm db:deploy
 pnpm db:seed
 ```
 

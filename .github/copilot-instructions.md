@@ -60,7 +60,8 @@ See `src/app/api/recipes/[id]/route.ts` and `src/app/api/recipes/route.ts` for i
 pnpm db:migrate      # Run migrations
 pnpm db:seed         # Seed with sample data
 pnpm db:studio       # Open Prisma Studio
-docker-compose up -d postgres  # Start local PostgreSQL
+pnpm db:up           # Start local PostgreSQL (waits for healthcheck)
+pnpm db:down         # Stop services
 ```
 
 ## State Management Architecture
@@ -190,9 +191,9 @@ src/
 
 ### Docker Database
 ```bash
-docker-compose up -d postgres   # Start PostgreSQL
-docker-compose down             # Stop services
-docker-compose logs postgres    # View logs
+docker compose up -d postgres   # Start PostgreSQL
+docker compose down             # Stop services
+docker compose logs postgres    # View logs
 ```
 Database runs on port 5432 (user: postgres, password: password, db: recipe_organizer)
 

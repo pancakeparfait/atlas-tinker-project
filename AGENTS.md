@@ -11,6 +11,7 @@
 
 ```bash
 pnpm dev              # Start Next.js dev server
+pnpm dev:all          # One-command: Docker Postgres + migrations + seed + Next dev
 pnpm build            # Production build
 pnpm lint             # Run ESLint
 pnpm type-check       # TypeScript type checking (tsc --noEmit)
@@ -39,8 +40,8 @@ pnpm db:studio        # Open Prisma Studio GUI
 pnpm db:generate      # Generate Prisma client
 pnpm db:reset         # Reset database (WARNING: deletes data)
 
-docker-compose up -d postgres   # Start PostgreSQL
-docker-compose down             # Stop services
+pnpm db:up                      # Start PostgreSQL (waits for healthcheck)
+pnpm db:down                    # Stop services
 ```
 
 ---

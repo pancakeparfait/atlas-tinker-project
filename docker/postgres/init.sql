@@ -1,6 +1,6 @@
--- Initialize the recipe organizer database
-CREATE DATABASE recipe_organizer;
-
--- Create a dedicated user (optional, using default postgres user for simplicity)
--- CREATE USER recipe_user WITH ENCRYPTED PASSWORD 'recipe_password';
--- GRANT ALL PRIVILEGES ON DATABASE recipe_organizer TO recipe_user;
+-- The official Postgres image creates the database named by POSTGRES_DB
+-- (see docker-compose.yml) before it runs the files in
+-- /docker-entrypoint-initdb.d. Re-creating it here makes first-time
+-- initialization fail with "database already exists".
+--
+-- Add extensions or reference data below if this project needs them.

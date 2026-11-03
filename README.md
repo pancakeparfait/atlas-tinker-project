@@ -22,12 +22,31 @@ A comprehensive recipe organizer and meal planner built with Next.js and React.
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 20.9+
 - PostgreSQL database (or Docker for local development)
-- pnpm (recommended) or npm
+- pnpm 10+ (required for the one-command start)
 - Docker and Docker Compose (optional, for local database)
 
-### Quick Start with Docker (Recommended for Local Development)
+### One-Command Start (Recommended)
+
+With Docker running and Node.js 20.9+ / pnpm installed:
+
+```bash
+pnpm dev:all
+```
+
+That single command:
+
+1. Creates `.env` / `.env.local` from `.env.example` if they are missing
+2. Installs dependencies if `node_modules` is missing or stale
+3. Starts PostgreSQL in Docker and waits for its healthcheck
+4. Applies Prisma migrations and generates the Prisma client
+5. Seeds sample data on a fresh database (safe to re-run)
+6. Starts the Next.js dev server at [http://localhost:3000](http://localhost:3000)
+
+Press `Ctrl-C` to stop the app. Stop PostgreSQL with `pnpm db:down`.
+
+### Manual Quick Start
 
 1. Clone the repository:
 ```bash
@@ -37,7 +56,7 @@ cd recipe-organizer
 
 2. Start the database with Docker:
 ```bash
-docker-compose up -d postgres
+pnpm db:up
 ```
 
 3. Install dependencies:
@@ -69,8 +88,8 @@ If you prefer to set up PostgreSQL manually:
 
 1. Install and configure PostgreSQL locally
 2. Create a database named `recipe_organizer`
-3. Follow steps 1, 3-6 from the Docker setup above
-4. Update the `DATABASE_URL` in `.env.local` with your local PostgreSQL connection string
+3. Follow the Manual Quick Start steps above, skipping the Docker step
+4. Update `DATABASE_URL` in both `.env` and `.env.local` with your local PostgreSQL connection string
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
@@ -78,21 +97,25 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ### Development
 - `pnpm dev` - Start development server
+- `pnpm dev:all` - Start PostgreSQL + migrations + seed + dev server in one command
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint
 - `pnpm type-check` - Run TypeScript type checking
 
 ### Database
-- `pnpm db:migrate` - Run database migrations
-- `pnpm db:seed` - Seed the database with sample data
+- `pnpm db:up` - Start PostgreSQL in Docker
+- `pnpm db:down` - Stop Docker services
+- `pnpm db:deploy` - Apply pending migrations (non-interactive)
+- `pnpm db:migrate` - Create/apply migrations in development
+- `pnpm db:seed` - Seed the database with sample data (idempotent)
 - `pnpm db:studio` - Open Prisma Studio
 
 ### Docker
-- `docker-compose up -d postgres` - Start PostgreSQL database
-- `docker-compose up -d` - Start all services (PostgreSQL + pgAdmin)
-- `docker-compose down` - Stop all services
-- `docker-compose logs postgres` - View PostgreSQL logs
+- `docker compose up -d postgres` - Start PostgreSQL database
+- `docker compose up -d` - Start all services (PostgreSQL + pgAdmin)
+- `docker compose down` - Stop all services
+- `docker compose logs postgres` - View PostgreSQL logs
 
 ## Docker Services
 

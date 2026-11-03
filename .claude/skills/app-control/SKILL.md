@@ -35,15 +35,13 @@ Stop both the application and database:
 ## Implementation
 
 When starting ($ARGUMENTS = "start"):
-1. Start the PostgreSQL database: `docker-compose up -d postgres`
-2. Wait for the database healthcheck to report ready (`docker-compose ps postgres` or poll `pg_isready`)
-3. Start the Next.js dev server: `pnpm dev`
-4. Confirm the app is running on http://localhost:3000
+1. Start the PostgreSQL database and wait for health: `pnpm db:up`
+2. Start the Next.js dev server: `pnpm dev`
+3. Confirm the app is running on http://localhost:3000
 
 When starting the database only ($ARGUMENTS = "start-db"):
-1. Start the PostgreSQL container: `docker-compose up -d postgres`
-2. Wait for the database healthcheck to report ready (`docker-compose ps postgres` or poll `pg_isready`)
-3. Confirm the container is running and accepting connections on localhost:5432
+1. Start the PostgreSQL container and wait for health: `pnpm db:up`
+2. Confirm the container is running and accepting connections on localhost:5432
 
 When stopping ($ARGUMENTS = "stop"):
 1. Find the process on port 3000: `lsof -ti:3000`
@@ -52,7 +50,7 @@ When stopping ($ARGUMENTS = "stop"):
 
 When stopping all ($ARGUMENTS = "stop-all"):
 1. Find and kill the process on port 3000
-2. Stop all Docker services: `docker-compose down`
+2. Stop all Docker services: `pnpm db:down`
 3. Confirm both services have stopped
 
 ## Notes
