@@ -2,9 +2,21 @@
 
 import React, { useState } from 'react'
 import { addDays, addWeeks, format, parse, startOfWeek } from 'date-fns'
+import type { MealType } from '@prisma/client'
 import { CalendarGrid } from '@/components/meal-plans/calendar-grid'
 import { WeekNavigation } from '@/components/meal-plans/week-navigation'
-import { useMealPlans, usePlannedMeals } from '@/lib/queries/meal-plan-queries'
+import {
+  RecipePickerModal,
+  type RecipePickerSelection,
+} from '@/components/meal-plans/recipe-picker-modal'
+import {
+  useCreatePlannedMeal,
+  useDeletePlannedMeal,
+  useMealPlans,
+  usePlannedMeals,
+  useUpdatePlannedMeal,
+  type PlannedMealWithRecipe,
+} from '@/lib/queries/meal-plan-queries'
 
 const VISIBLE_WEEKS = 4
 const DATE_FORMAT = 'yyyy-MM-dd'
@@ -33,8 +45,15 @@ function formatRange(start: string, end: string): string {
   return `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`
 }
 
+interface PickerTarget {
+  mealDate: string
+  mealType: MealType
+}
+
 export default function MealPlansPage(): React.JSX.Element {
   const [anchorWeekStart, setAnchorWeekStart] = useState(currentWeekStart)
+  const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const plansQuery = useMealPlans()
   const plans = plansQuery.data ?? []
@@ -47,6 +66,110 @@ export default function MealPlansPage(): React.JSX.Element {
   const windowStart = anchorWeekStart
   const windowEnd = addDaysToDateOnly(anchorWeekStart, VISIBLE_WEEKS * 7 - 1)
   const mealsQuery = usePlannedMeals(activePlanId, windowStart, windowEnd)
+
+  const createPlannedMeal = useCreatePlannedMeal()
+  const updatePlannedMeal = useUpdatePlannedMeal()
+  const deletePlannedMeal = useDeletePlannedMeal()
+  const isSaving =
+    createPlannedMeal.isPending ||
+    updatePlannedMeal.isPending ||
+    deletePlannedMeal.isPending
+
+  const plannedMeals = mealsQuery.data ?? []
+  const pickerMeals = pickerTarget
+    ? plannedMeals.filter(
+        (meal) =>
+          meal.mealDate === pickerTarget.mealDate &&
+          meal.mealType === pickerTarget.mealType
+      )
+    : []
+
+  const openPicker = (mealDate: string, mealType: MealType) => {
+    setActionError(null)
+    setPickerTarget({ mealDate, mealType })
+  }
+
+  const handleAssign = async ({
+    recipeIds,
+    note,
+  }: RecipePickerSelection): Promise<void> => {
+    if (!activePlanId || !pickerTarget) return
+    setActionError(null)
+
+    const existingRecipeIds = new Set(
+      pickerMeals
+        .map((meal) => meal.recipeId)
+        .filter((id): id is string => id !== null)
+    )
+    const noteRow = pickerMeals.find((meal) => meal.recipeId === null)
+    const trimmedNote = note.trim()
+
+    const operations: Promise<unknown>[] = []
+
+    for (const recipeId of recipeIds) {
+      if (existingRecipeIds.has(recipeId)) continue
+      operations.push(
+        createPlannedMeal.mutateAsync({
+          mealPlanId: activePlanId,
+          recipeId,
+          mealDate: pickerTarget.mealDate,
+          mealType: pickerTarget.mealType,
+          servingsPlanned: 1,
+        })
+      )
+    }
+
+    if (noteRow) {
+      if (trimmedNote === '') {
+        operations.push(
+          deletePlannedMeal.mutateAsync({
+            id: noteRow.id,
+            mealPlanId: activePlanId,
+          })
+        )
+      } else if (trimmedNote !== (noteRow.notes ?? '').trim()) {
+        operations.push(
+          updatePlannedMeal.mutateAsync({
+            id: noteRow.id,
+            mealPlanId: activePlanId,
+            data: { notes: trimmedNote },
+          })
+        )
+      }
+    } else if (trimmedNote !== '') {
+      operations.push(
+        createPlannedMeal.mutateAsync({
+          mealPlanId: activePlanId,
+          recipeId: null,
+          mealDate: pickerTarget.mealDate,
+          mealType: pickerTarget.mealType,
+          servingsPlanned: 0,
+          notes: trimmedNote,
+        })
+      )
+    }
+
+    try {
+      await Promise.all(operations)
+      setPickerTarget(null)
+    } catch {
+      setActionError('Could not update this meal slot. Please try again.')
+    }
+  }
+
+  const handleRemoveMeal = async (
+    meal: PlannedMealWithRecipe
+  ): Promise<void> => {
+    setActionError(null)
+    try {
+      await deletePlannedMeal.mutateAsync({
+        id: meal.id,
+        mealPlanId: meal.mealPlanId,
+      })
+    } catch {
+      setActionError('Could not remove that item. Please try again.')
+    }
+  }
 
   if (plansQuery.isLoading) {
     return (
@@ -101,11 +224,33 @@ export default function MealPlansPage(): React.JSX.Element {
         </p>
       )}
 
+      {actionError && (
+        <p role="alert" className="mb-4 text-sm text-red-500">
+          {actionError}
+        </p>
+      )}
+
       <CalendarGrid
         startDate={windowStart}
         today={today}
-        plannedMeals={mealsQuery.data ?? []}
+        plannedMeals={plannedMeals}
+        onAddMeal={activePlanId ? openPicker : undefined}
+        onRemoveMeal={handleRemoveMeal}
       />
+
+      {pickerTarget && (
+        <RecipePickerModal
+          open
+          onOpenChange={(next) => {
+            if (!next) setPickerTarget(null)
+          }}
+          mealDate={pickerTarget.mealDate}
+          mealType={pickerTarget.mealType}
+          existingMeals={pickerMeals}
+          onSubmit={handleAssign}
+          isSaving={isSaving}
+        />
+      )}
     </div>
   )
 }

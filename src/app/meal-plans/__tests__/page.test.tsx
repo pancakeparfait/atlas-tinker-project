@@ -1,12 +1,26 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import MealPlansPage from '../page'
-import { useMealPlans, usePlannedMeals } from '@/lib/queries/meal-plan-queries'
+import {
+  useMealPlans,
+  usePlannedMeals,
+  useCreatePlannedMeal,
+  useUpdatePlannedMeal,
+  useDeletePlannedMeal,
+} from '@/lib/queries/meal-plan-queries'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
+import { useRecipes } from '@/lib/queries/recipe-queries'
 
 jest.mock('@/lib/queries/meal-plan-queries', () => ({
   useMealPlans: jest.fn(),
   usePlannedMeals: jest.fn(),
+  useCreatePlannedMeal: jest.fn(),
+  useUpdatePlannedMeal: jest.fn(),
+  useDeletePlannedMeal: jest.fn(),
+}))
+
+jest.mock('@/lib/queries/recipe-queries', () => ({
+  useRecipes: jest.fn(),
 }))
 
 // Fixed local time: Wednesday, 2026-10-21 (inside the week of Mon 2026-10-19)
@@ -16,6 +30,59 @@ const CURRENT_WEEK_SUNDAY = '2026-11-15'
 
 const plansMock = useMealPlans as jest.Mock
 const mealsMock = usePlannedMeals as jest.Mock
+const createMealMock = useCreatePlannedMeal as jest.Mock
+const updateMealMock = useUpdatePlannedMeal as jest.Mock
+const deleteMealMock = useDeletePlannedMeal as jest.Mock
+const recipesMock = useRecipes as jest.Mock
+
+const createMutate = jest.fn()
+const updateMutate = jest.fn()
+const deleteMutate = jest.fn()
+
+const pickerRecipes = [
+  {
+    id: 'r1',
+    title: 'Pancakes',
+    mealCategory: 'BREAKFAST',
+    servings: 4,
+    difficultyLevel: 'EASY',
+    instructions: [],
+    tags: [],
+    isDraft: false,
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+    ingredients: [],
+    primaryImageId: null,
+  },
+  {
+    id: 'r2',
+    title: 'Soup',
+    mealCategory: 'DINNER',
+    servings: 2,
+    difficultyLevel: 'EASY',
+    instructions: [],
+    tags: [],
+    isDraft: false,
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+    ingredients: [],
+    primaryImageId: null,
+  },
+]
+
+function noteMeal(overrides: Partial<PlannedMealWithRecipe> = {}) {
+  return {
+    id: 'pm-note',
+    mealPlanId: 'p1',
+    recipeId: null,
+    mealDate: '2026-10-19',
+    mealType: 'BREAKFAST' as const,
+    servingsPlanned: 0,
+    notes: 'Old note',
+    recipe: null,
+    ...overrides,
+  }
+}
 
 const plans = [
   {
@@ -41,6 +108,26 @@ function mockQueries({
   })
   mealsMock.mockReturnValue({
     data: mealsData,
+    isLoading: false,
+    error: null,
+  })
+  createMealMock.mockReturnValue({
+    mutateAsync: createMutate,
+    isPending: false,
+  })
+  updateMealMock.mockReturnValue({
+    mutateAsync: updateMutate,
+    isPending: false,
+  })
+  deleteMealMock.mockReturnValue({
+    mutateAsync: deleteMutate,
+    isPending: false,
+  })
+  recipesMock.mockReturnValue({
+    data: {
+      recipes: pickerRecipes,
+      pagination: { page: 1, limit: 50, total: 2, pages: 1 },
+    },
     isLoading: false,
     error: null,
   })
@@ -182,5 +269,159 @@ describe('MealPlansPage', () => {
       CURRENT_WEEK_MONDAY,
       CURRENT_WEEK_SUNDAY
     )
+  })
+
+  it('opens the recipe picker when a meal slot is clicked', () => {
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+    expect(
+      screen.getByRole('heading', { name: /add to breakfast/i })
+    ).toBeInTheDocument()
+  })
+
+  it('does not open the recipe picker when there is no active plan', () => {
+    mockQueries({ plansData: [] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('assigns multiple recipes and a note to a slot', () => {
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+    fireEvent.click(screen.getByRole('checkbox', { name: /pancakes/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /soup/i }))
+    fireEvent.change(screen.getByLabelText(/^note$/i), {
+      target: { value: 'Brunch spread' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(createMutate).toHaveBeenCalledTimes(3)
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: 'r1',
+      mealDate: CURRENT_WEEK_MONDAY,
+      mealType: 'BREAKFAST',
+      servingsPlanned: 1,
+    })
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: 'r2',
+      mealDate: CURRENT_WEEK_MONDAY,
+      mealType: 'BREAKFAST',
+      servingsPlanned: 1,
+    })
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: null,
+      mealDate: CURRENT_WEEK_MONDAY,
+      mealType: 'BREAKFAST',
+      servingsPlanned: 0,
+      notes: 'Brunch spread',
+    })
+  })
+
+  it('does not re-create recipes already assigned to the slot', () => {
+    mockQueries({
+      mealsData: [
+        noteMeal({
+          id: 'pm-r1',
+          recipeId: 'r1',
+          servingsPlanned: 2,
+          notes: null,
+          recipe: {
+            id: 'r1',
+            title: 'Pancakes',
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 15,
+            difficultyLevel: 'EASY',
+          },
+        }),
+      ],
+    })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    const assigned = screen.getByRole('checkbox', { name: /pancakes/i })
+    expect(assigned).toBeChecked()
+    expect(assigned).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /soup/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(createMutate).toHaveBeenCalledTimes(1)
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: 'r2',
+      mealDate: CURRENT_WEEK_MONDAY,
+      mealType: 'BREAKFAST',
+      servingsPlanned: 1,
+    })
+  })
+
+  it('updates an existing slot note via PUT', () => {
+    mockQueries({ mealsData: [noteMeal()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    const note = screen.getByLabelText(/^note$/i)
+    expect(note).toHaveValue('Old note')
+    fireEvent.change(note, { target: { value: 'New note' } })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(updateMutate).toHaveBeenCalledWith({
+      id: 'pm-note',
+      mealPlanId: 'p1',
+      data: { notes: 'New note' },
+    })
+    expect(createMutate).not.toHaveBeenCalled()
+  })
+
+  it('removes an existing slot note when it is cleared', () => {
+    mockQueries({ mealsData: [noteMeal()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+    fireEvent.change(screen.getByLabelText(/^note$/i), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(deleteMutate).toHaveBeenCalledWith({
+      id: 'pm-note',
+      mealPlanId: 'p1',
+    })
+  })
+
+  it('removes a planned meal after confirmation', () => {
+    mockQueries({
+      mealsData: [
+        {
+          id: 'pm1',
+          mealPlanId: 'p1',
+          recipeId: 'r1',
+          mealDate: '2026-10-19',
+          mealType: 'BREAKFAST',
+          servingsPlanned: 2,
+          notes: null,
+          recipe: {
+            id: 'r1',
+            title: 'Pancakes',
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 15,
+            difficultyLevel: 'EASY',
+          },
+        },
+      ],
+    })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getByRole('button', { name: /remove pancakes/i }))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+
+    expect(deleteMutate).toHaveBeenCalledWith({
+      id: 'pm1',
+      mealPlanId: 'p1',
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

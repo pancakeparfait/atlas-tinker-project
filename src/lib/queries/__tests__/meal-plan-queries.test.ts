@@ -13,6 +13,7 @@ import {
   useUpdateMealPlan,
   useDeleteMealPlan,
   useCreatePlannedMeal,
+  useUpdatePlannedMeal,
   useDeletePlannedMeal,
 } from '../meal-plan-queries'
 
@@ -176,6 +177,29 @@ describe('meal-plan-queries', () => {
       )
     })
 
+    it('useUpdatePlannedMeal PUTs to /api/planned-meals/:id', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'pm1' }),
+      })
+      const qc = freshClient()
+      const { result } = renderHook(() => useUpdatePlannedMeal(), {
+        wrapper: makeWrapper(qc),
+      })
+      await act(async () => {
+        await result.current.mutateAsync({
+          id: 'pm1',
+          mealPlanId: 'p1',
+          data: { notes: 'new note' },
+        })
+      })
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe('/api/planned-meals/pm1')
+      expect(init.method).toBe('PUT')
+      expect(init.headers).toEqual({ 'Content-Type': 'application/json' })
+      expect(init.body).toBe(JSON.stringify({ notes: 'new note' }))
+    })
+
     it('useDeletePlannedMeal DELETEs /api/planned-meals/:id', async () => {
       fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) })
       const qc = freshClient()
@@ -268,6 +292,28 @@ describe('meal-plan-queries', () => {
       await waitFor(() => expect(spy).toHaveBeenCalled())
       const calls = spy.mock.calls.map((c) => c[0]?.queryKey)
       // prefix key, not exact range key — any date window refreshes
+      expect(calls).toContainEqual(mealPlanKeys.meals('p1'))
+    })
+
+    it('useUpdatePlannedMeal invalidates the meal-range prefix via mealPlanId variable', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'pm1' }),
+      })
+      const qc = freshClient()
+      const spy = jest.spyOn(qc, 'invalidateQueries')
+      const { result } = renderHook(() => useUpdatePlannedMeal(), {
+        wrapper: makeWrapper(qc),
+      })
+      await act(async () => {
+        await result.current.mutateAsync({
+          id: 'pm1',
+          mealPlanId: 'p1',
+          data: { notes: 'new note' },
+        })
+      })
+      await waitFor(() => expect(spy).toHaveBeenCalled())
+      const calls = spy.mock.calls.map((c) => c[0]?.queryKey)
       expect(calls).toContainEqual(mealPlanKeys.meals('p1'))
     })
 

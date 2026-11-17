@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MealSlot } from '../meal-slot'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
 
@@ -102,5 +102,82 @@ describe('MealSlot', () => {
   it('renders with no plannedMeals prop (undefined)', () => {
     render(<MealSlot mealType="LUNCH" />)
     expect(screen.getByText('Lunch')).toBeInTheDocument()
+  })
+
+  it('calls onAdd when the slot is clicked', () => {
+    const onAdd = jest.fn()
+    render(<MealSlot mealType="LUNCH" onAdd={onAdd} />)
+    fireEvent.click(screen.getByTestId('meal-slot'))
+    expect(onAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onAdd from the add button', () => {
+    const onAdd = jest.fn()
+    render(<MealSlot mealType="LUNCH" onAdd={onAdd} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to lunch/i }))
+    expect(onAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('asks for confirmation before removing a recipe', () => {
+    const onRemoveMeal = jest.fn()
+    render(
+      <MealSlot
+        mealType="BREAKFAST"
+        plannedMeals={[makeMeal()]}
+        onRemoveMeal={onRemoveMeal}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove pancakes/i }))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(screen.getByText(/remove pancakes\?/i)).toBeInTheDocument()
+    expect(onRemoveMeal).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+    expect(onRemoveMeal).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pm1' })
+    )
+  })
+
+  it('cancels removal when No is clicked', () => {
+    const onRemoveMeal = jest.fn()
+    render(
+      <MealSlot
+        mealType="BREAKFAST"
+        plannedMeals={[makeMeal()]}
+        onRemoveMeal={onRemoveMeal}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove pancakes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^no$/i }))
+    expect(onRemoveMeal).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('asks for confirmation before removing a note', () => {
+    const onRemoveMeal = jest.fn()
+    render(
+      <MealSlot
+        mealType="DINNER"
+        plannedMeals={[
+          makeMeal({
+            id: 'pm2',
+            recipeId: null,
+            recipe: null,
+            servingsPlanned: 0,
+            notes: 'Order takeout',
+          }),
+        ]}
+        onRemoveMeal={onRemoveMeal}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /remove note/i }))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(screen.getByText(/remove note\?/i)).toBeInTheDocument()
+    expect(onRemoveMeal).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+    expect(onRemoveMeal).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pm2', notes: 'Order takeout' })
+    )
   })
 })

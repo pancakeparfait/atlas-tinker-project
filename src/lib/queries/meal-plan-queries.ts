@@ -57,6 +57,14 @@ export interface CreatePlannedMealInput {
   notes?: string
 }
 
+export interface UpdatePlannedMealInput {
+  recipeId?: string | null
+  mealDate?: string
+  mealType?: MealType
+  servingsPlanned?: number
+  notes?: string | null
+}
+
 // Query keys — distinct prefixes for plans vs. meal-range queries
 export const mealPlanKeys = {
   all: ['mealPlans'] as const,
@@ -148,6 +156,21 @@ async function createPlannedMeal(
   return response.json()
 }
 
+async function updatePlannedMeal(
+  id: string,
+  data: UpdatePlannedMealInput,
+): Promise<PlannedMealWithRecipe> {
+  const response = await fetch(`/api/planned-meals/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to update planned meal')
+  }
+  return response.json()
+}
+
 async function deletePlannedMeal(id: string): Promise<void> {
   const response = await fetch(`/api/planned-meals/${id}`, { method: 'DELETE' })
   if (!response.ok) {
@@ -221,6 +244,25 @@ export function useCreatePlannedMeal() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: mealPlanKeys.meals(variables.mealPlanId),
+      })
+    },
+  })
+}
+
+export function useUpdatePlannedMeal() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string
+      mealPlanId: string
+      data: UpdatePlannedMealInput
+    }) => updatePlannedMeal(id, data),
+    onSuccess: (_, { mealPlanId }) => {
+      queryClient.invalidateQueries({
+        queryKey: mealPlanKeys.meals(mealPlanId),
       })
     },
   })

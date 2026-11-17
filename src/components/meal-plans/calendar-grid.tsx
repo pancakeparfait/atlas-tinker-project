@@ -17,6 +17,8 @@ export interface CalendarGridProps {
   /** Calendar date to highlight as today (YYYY-MM-DD) */
   today: string
   plannedMeals?: PlannedMealWithRecipe[]
+  onAddMeal?: (mealDate: string, mealType: MealType) => void
+  onRemoveMeal?: (meal: PlannedMealWithRecipe) => void
 }
 
 function groupMealsBySlot(
@@ -40,6 +42,8 @@ export function CalendarGrid({
   startDate,
   today,
   plannedMeals = [],
+  onAddMeal,
+  onRemoveMeal,
 }: CalendarGridProps): React.JSX.Element {
   const start = parse(startDate, 'yyyy-MM-dd', new Date())
   const days = eachDayOfInterval({
@@ -86,6 +90,12 @@ export function CalendarGrid({
                 key={mealType}
                 mealType={mealType}
                 plannedMeals={mealsBySlot.get(`${dayKey}|${mealType}`) ?? []}
+                onAdd={
+                  onAddMeal
+                    ? () => onAddMeal(dayKey, mealType)
+                    : undefined
+                }
+                onRemoveMeal={onRemoveMeal}
               />
             ))}
           </div>
