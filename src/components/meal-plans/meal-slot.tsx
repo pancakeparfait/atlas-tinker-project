@@ -39,7 +39,6 @@ export interface MealSlotProps {
   onAdd?: () => void
   onRemoveMeal?: (meal: PlannedMealWithRecipe) => void
   onRemoveNote?: (meal: PlannedMealWithRecipe) => void
-  isOutOfRange?: boolean
 }
 
 export function MealSlot({
@@ -48,14 +47,12 @@ export function MealSlot({
   onAdd,
   onRemoveMeal,
   onRemoveNote,
-  isOutOfRange = false,
 }: MealSlotProps): React.JSX.Element {
   const label = MEAL_TYPE_LABELS[mealType]
   const isEmpty = plannedMeals.length === 0
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
   const handleAdd = () => {
-    if (isOutOfRange) return
     if (onAdd) onAdd()
   }
 
@@ -73,24 +70,18 @@ export function MealSlot({
   return (
     <div
       data-testid="meal-slot"
-      data-out-of-range={isOutOfRange ? 'true' : undefined}
-      aria-disabled={isOutOfRange ? true : undefined}
-      title={isOutOfRange ? 'Outside the meal plan date range' : undefined}
       onClick={handleAdd}
       className={cn(
         'min-h-[4.5rem] rounded-md border p-2 text-sm',
         isEmpty ? 'bg-muted/40 text-muted-foreground' : 'bg-background',
-        isOutOfRange && 'cursor-not-allowed opacity-50',
-        !isOutOfRange &&
-          onAdd &&
-          'cursor-pointer transition-colors hover:border-primary/60'
+        onAdd && 'cursor-pointer transition-colors hover:border-primary/60'
       )}
     >
       <div className="flex items-center justify-between gap-1">
         <span className="block text-xs font-medium uppercase tracking-wide">
           {label}
         </span>
-        {onAdd && !isOutOfRange && (
+        {onAdd && (
           <button
             type="button"
             aria-label={`Add to ${label}`}

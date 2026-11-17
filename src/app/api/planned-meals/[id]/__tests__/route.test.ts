@@ -12,10 +12,12 @@ jest.mock('@/lib/prisma', () => ({
     },
     mealPlan: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     recipe: {
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   },
 }))
 
@@ -27,7 +29,9 @@ const findUnique = prisma.plannedMeal.findUnique as unknown as jest.Mock
 const update = prisma.plannedMeal.update as unknown as jest.Mock
 const del = prisma.plannedMeal.delete as unknown as jest.Mock
 const planFindUnique = prisma.mealPlan.findUnique as unknown as jest.Mock
+const planUpdate = prisma.mealPlan.update as unknown as jest.Mock
 const recipeFindUnique = prisma.recipe.findUnique as unknown as jest.Mock
+const transaction = prisma.$transaction as unknown as jest.Mock
 
 const params = Promise.resolve({ id: 'pm1' })
 
@@ -82,6 +86,9 @@ describe('DELETE /api/planned-meals/[id]', () => {
 describe('PUT /api/planned-meals/[id]', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => unknown) => callback(prisma)
+    )
   })
 
   it('updates the note on a notes-only meal', async () => {
@@ -217,15 +224,80 @@ describe('PUT /api/planned-meals/[id]', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns 400 when the date is outside the plan range', async () => {
+  it('extends the plan end date and updates a meal moved past the original range', async () => {
     findUnique.mockResolvedValue(makeMeal())
     planFindUnique.mockResolvedValue(makePlan())
+    update.mockResolvedValue(
+      makeMeal({ mealDate: new Date('2026-09-08T00:00:00.000Z') })
+    )
     const req = new NextRequest('http://test/api/planned-meals/pm1', {
       method: 'PUT',
       body: JSON.stringify({ mealDate: '2026-09-08' }),
     })
     const res = await PUT(req, { params })
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(200)
+    expect((await res.json()).mealDate).toBe('2026-09-08')
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { endDate: new Date('2026-09-08T00:00:00.000Z') },
+    })
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'pm1' },
+      data: { mealDate: new Date('2026-09-08T00:00:00.000Z') },
+      include: { recipe: { select: PLANNED_MEAL_RECIPE_SELECT } },
+    })
+  })
+
+  it('extends the plan start date and updates a meal moved before the original range', async () => {
+    findUnique.mockResolvedValue(makeMeal())
+    planFindUnique.mockResolvedValue(makePlan())
+    update.mockResolvedValue(
+      makeMeal({ mealDate: new Date('2026-08-31T00:00:00.000Z') })
+    )
+    const req = new NextRequest('http://test/api/planned-meals/pm1', {
+      method: 'PUT',
+      body: JSON.stringify({ mealDate: '2026-08-31' }),
+    })
+    const res = await PUT(req, { params })
+    expect(res.status).toBe(200)
+    expect((await res.json()).mealDate).toBe('2026-08-31')
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { startDate: new Date('2026-08-31T00:00:00.000Z') },
+    })
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'pm1' },
+      data: { mealDate: new Date('2026-08-31T00:00:00.000Z') },
+      include: { recipe: { select: PLANNED_MEAL_RECIPE_SELECT } },
+    })
+  })
+
+  it('extends the plan when an existing meal date is already outside the range', async () => {
+    findUnique.mockResolvedValue(
+      makeMeal({ mealDate: new Date('2026-09-08T00:00:00.000Z') })
+    )
+    planFindUnique.mockResolvedValue(makePlan())
+    update.mockResolvedValue(
+      makeMeal({
+        mealDate: new Date('2026-09-08T00:00:00.000Z'),
+        notes: 'new note',
+      })
+    )
+    const req = new NextRequest('http://test/api/planned-meals/pm1', {
+      method: 'PUT',
+      body: JSON.stringify({ notes: 'new note' }),
+    })
+    const res = await PUT(req, { params })
+    expect(res.status).toBe(200)
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { endDate: new Date('2026-09-08T00:00:00.000Z') },
+    })
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'pm1' },
+      data: { notes: 'new note' },
+      include: { recipe: { select: PLANNED_MEAL_RECIPE_SELECT } },
+    })
   })
 
   it('returns 400 for a malformed date', async () => {

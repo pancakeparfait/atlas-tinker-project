@@ -4,7 +4,6 @@ import React from 'react'
 import { addDays, eachDayOfInterval, format, parse } from 'date-fns'
 import type { MealType } from '@prisma/client'
 import { MealSlot } from './meal-slot'
-import { isInRange } from '@/lib/date-only'
 import { cn } from '@/lib/utils'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
 
@@ -21,8 +20,6 @@ export interface CalendarGridProps {
   onAddMeal?: (mealDate: string, mealType: MealType) => void
   onRemoveMeal?: (meal: PlannedMealWithRecipe) => void
   onRemoveNote?: (meal: PlannedMealWithRecipe) => void
-  /** Inclusive plan range; slots outside it cannot open the recipe picker. */
-  editableRange?: { start: string; end: string } | null
 }
 
 function groupMealsBySlot(
@@ -49,7 +46,6 @@ export function CalendarGrid({
   onAddMeal,
   onRemoveMeal,
   onRemoveNote,
-  editableRange = null,
 }: CalendarGridProps): React.JSX.Element {
   const start = parse(startDate, 'yyyy-MM-dd', new Date())
   const days = eachDayOfInterval({
@@ -72,9 +68,6 @@ export function CalendarGrid({
         const dayKey = format(day, 'yyyy-MM-dd')
         const isToday = dayKey === today
         const isFirstOfMonth = format(day, 'd') === '1'
-        const isEditable =
-          !editableRange ||
-          isInRange(dayKey, editableRange.start, editableRange.end)
         return (
           <div
             key={dayKey}
@@ -99,14 +92,9 @@ export function CalendarGrid({
                 key={mealType}
                 mealType={mealType}
                 plannedMeals={mealsBySlot.get(`${dayKey}|${mealType}`) ?? []}
-                onAdd={
-                  onAddMeal && isEditable
-                    ? () => onAddMeal(dayKey, mealType)
-                    : undefined
-                }
+                onAdd={onAddMeal ? () => onAddMeal(dayKey, mealType) : undefined}
                 onRemoveMeal={onRemoveMeal}
                 onRemoveNote={onRemoveNote}
-                isOutOfRange={!!editableRange && !isEditable}
               />
             ))}
           </div>

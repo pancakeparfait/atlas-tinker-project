@@ -90,12 +90,6 @@ export async function PUT(
 
     const startStr = serializeDateOnly(plan.startDate)!
     const endStr = serializeDateOnly(plan.endDate)!
-    if (!isInRange(mealDate, startStr, endStr)) {
-      return NextResponse.json(
-        { error: 'mealDate is outside the meal plan date range' },
-        { status: 400 },
-      )
-    }
 
     if (recipeId) {
       const recipe = await prisma.recipe.findUnique({
@@ -107,22 +101,38 @@ export async function PUT(
       }
     }
 
-    const meal = await prisma.plannedMeal.update({
-      where: { id },
-      data: {
-        ...(data.recipeId !== undefined ? { recipeId: data.recipeId } : {}),
-        ...(data.mealDate !== undefined
-          ? { mealDate: toDateOnly(data.mealDate) }
-          : {}),
-        ...(data.mealType !== undefined ? { mealType: data.mealType } : {}),
-        ...(data.servingsPlanned !== undefined
-          ? { servingsPlanned: data.servingsPlanned }
-          : {}),
-        ...(data.notes !== undefined ? { notes: data.notes } : {}),
-      },
-      include: {
-        recipe: { select: PLANNED_MEAL_RECIPE_SELECT },
-      },
+    const mealData = {
+      ...(data.recipeId !== undefined ? { recipeId: data.recipeId } : {}),
+      ...(data.mealDate !== undefined
+        ? { mealDate: toDateOnly(data.mealDate) }
+        : {}),
+      ...(data.mealType !== undefined ? { mealType: data.mealType } : {}),
+      ...(data.servingsPlanned !== undefined
+        ? { servingsPlanned: data.servingsPlanned }
+        : {}),
+      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+    }
+
+    const meal = await prisma.$transaction(async (tx) => {
+      if (!isInRange(mealDate, startStr, endStr)) {
+        await tx.mealPlan.update({
+          where: { id: existing.mealPlanId },
+          data: {
+            ...(mealDate < startStr
+              ? { startDate: toDateOnly(mealDate) }
+              : {}),
+            ...(mealDate > endStr ? { endDate: toDateOnly(mealDate) } : {}),
+          },
+        })
+      }
+
+      return tx.plannedMeal.update({
+        where: { id },
+        data: mealData,
+        include: {
+          recipe: { select: PLANNED_MEAL_RECIPE_SELECT },
+        },
+      })
     })
 
     return NextResponse.json(serializePlannedMeal(meal))

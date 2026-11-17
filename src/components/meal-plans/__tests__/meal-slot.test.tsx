@@ -153,15 +153,19 @@ describe('MealSlot', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
-  it('does not call onAdd when the slot is out of range', () => {
+  it('has no out-of-range gating state', () => {
     const onAdd = jest.fn()
-    render(<MealSlot mealType="LUNCH" onAdd={onAdd} isOutOfRange />)
+    render(<MealSlot mealType="LUNCH" onAdd={onAdd} />)
     const slot = screen.getByTestId('meal-slot')
 
-    expect(slot).toHaveAttribute('aria-disabled', 'true')
-    expect(slot.className).toContain('cursor-not-allowed')
-    fireEvent.click(slot)
-    expect(onAdd).not.toHaveBeenCalled()
+    expect(slot).not.toHaveAttribute('data-out-of-range')
+    expect(slot).not.toHaveAttribute('aria-disabled')
+    expect(slot).not.toHaveAttribute('title')
+    expect(slot.className).not.toContain('cursor-not-allowed')
+    expect(slot.className).toContain('cursor-pointer')
+    expect(
+      screen.getByRole('button', { name: /add to lunch/i })
+    ).toBeInTheDocument()
   })
 
   it('removes a note from a recipe-backed row without removing the recipe', () => {

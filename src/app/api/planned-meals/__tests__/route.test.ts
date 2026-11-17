@@ -7,6 +7,7 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     mealPlan: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     recipe: {
       findUnique: jest.fn(),
@@ -14,6 +15,7 @@ jest.mock('@/lib/prisma', () => ({
     plannedMeal: {
       create: jest.fn(),
     },
+    $transaction: jest.fn(),
   },
 }))
 
@@ -22,8 +24,10 @@ import { prisma } from '@/lib/prisma'
 import { PLANNED_MEAL_RECIPE_SELECT } from '@/lib/serializers/meal-plan-serializers'
 
 const mealPlanFindUnique = prisma.mealPlan.findUnique as unknown as jest.Mock
+const planUpdate = prisma.mealPlan.update as unknown as jest.Mock
 const recipeFindUnique = prisma.recipe.findUnique as unknown as jest.Mock
 const create = prisma.plannedMeal.create as unknown as jest.Mock
+const transaction = prisma.$transaction as unknown as jest.Mock
 
 function basePlan() {
   return {
@@ -49,6 +53,9 @@ function baseCreated(overrides: Record<string, unknown> = {}) {
 describe('POST /api/planned-meals', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => unknown) => callback(prisma)
+    )
   })
 
   it('creates a recipe-backed meal, returns 201 with recipe summary', async () => {
@@ -160,8 +167,12 @@ describe('POST /api/planned-meals', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns 400 when mealDate is outside plan range', async () => {
+  it('extends the plan end date and creates a meal after the original range', async () => {
     mealPlanFindUnique.mockResolvedValue(basePlan())
+    recipeFindUnique.mockResolvedValue({ id: 'r1' })
+    create.mockResolvedValue(
+      baseCreated({ mealDate: new Date('2026-09-08T00:00:00.000Z') })
+    )
     const req = new NextRequest('http://test/api/planned-meals', {
       method: 'POST',
       body: JSON.stringify({
@@ -173,7 +184,51 @@ describe('POST /api/planned-meals', () => {
       }),
     })
     const res = await POST(req)
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(201)
+    expect((await res.json()).mealDate).toBe('2026-09-08')
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { endDate: new Date('2026-09-08T00:00:00.000Z') },
+    })
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mealDate: new Date('2026-09-08T00:00:00.000Z'),
+        }),
+      })
+    )
+  })
+
+  it('extends the plan start date and creates a meal before the original range', async () => {
+    mealPlanFindUnique.mockResolvedValue(basePlan())
+    recipeFindUnique.mockResolvedValue({ id: 'r1' })
+    create.mockResolvedValue(
+      baseCreated({ mealDate: new Date('2026-08-31T00:00:00.000Z') })
+    )
+    const req = new NextRequest('http://test/api/planned-meals', {
+      method: 'POST',
+      body: JSON.stringify({
+        mealPlanId: 'p1',
+        recipeId: 'r1',
+        mealDate: '2026-08-31',
+        mealType: 'DINNER',
+        servingsPlanned: 4,
+      }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+    expect((await res.json()).mealDate).toBe('2026-08-31')
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { startDate: new Date('2026-08-31T00:00:00.000Z') },
+    })
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mealDate: new Date('2026-08-31T00:00:00.000Z'),
+        }),
+      })
+    )
   })
 
   it('returns 400 for a recipe-backed meal with servings 0', async () => {

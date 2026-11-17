@@ -338,26 +338,62 @@ describe('MealPlansPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('does not open the picker for a slot outside the active plan range', () => {
+  it('lets every visible day open the picker, including days beyond the plan range', () => {
     const { container } = render(<MealPlansPage />)
-    const outsideDay = Array.from(
+    const days = Array.from(
       container.querySelectorAll('[data-testid="calendar-day"]')
-    ).find((cell) => cell.getAttribute('data-date') === '2026-10-26')
+    )
+    expect(days).toHaveLength(28)
+    days.forEach((day) => {
+      const slots = within(day as HTMLElement).getAllByTestId('meal-slot')
+      expect(slots).toHaveLength(3)
+      slots.forEach((slot) => {
+        expect(slot).not.toHaveAttribute('data-out-of-range')
+        expect(slot).not.toHaveAttribute('aria-disabled')
+        expect(slot.className).not.toContain('cursor-not-allowed')
+      })
+    })
+
+    const outsideDay = days.find(
+      (cell) => cell.getAttribute('data-date') === '2026-11-15'
+    )
     expect(outsideDay).toBeDefined()
-
-    const slot = within(outsideDay as HTMLElement).getAllByTestId(
-      'meal-slot'
-    )[0]
-    expect(slot).toHaveAttribute('aria-disabled', 'true')
-    expect(slot).toHaveAttribute('data-out-of-range', 'true')
-    expect(slot.className).toContain('cursor-not-allowed')
+    fireEvent.click(
+      within(outsideDay as HTMLElement).getAllByTestId('meal-slot')[0]
+    )
     expect(
-      within(slot).queryByRole('button', { name: /add to breakfast/i })
-    ).not.toBeInTheDocument()
+      screen.getByRole('heading', { name: /add to breakfast/i })
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: /pancakes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
 
-    fireEvent.click(slot)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(createMutate).not.toHaveBeenCalled()
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: 'r1',
+      mealDate: '2026-11-15',
+      mealType: 'BREAKFAST',
+      servingsPlanned: 1,
+    })
+  })
+
+  it('keeps the visible window anchored when the plan start moves backwards', () => {
+    const { container, rerender } = render(<MealPlansPage />)
+    expect(firstVisibleDate(container)).toBe(CURRENT_WEEK_MONDAY)
+
+    mockQueries({
+      plansData: [{ ...plans[0], startDate: '2026-10-05' }],
+    })
+    rerender(<MealPlansPage />)
+
+    expect(firstVisibleDate(container)).toBe(CURRENT_WEEK_MONDAY)
+    expect(mealsMock).toHaveBeenLastCalledWith(
+      'p1',
+      CURRENT_WEEK_MONDAY,
+      CURRENT_WEEK_SUNDAY
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(firstVisibleDate(container)).toBe('2026-10-26')
   })
 
   it('assigns multiple recipes and a note to a slot', () => {

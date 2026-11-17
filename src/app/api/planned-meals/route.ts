@@ -59,16 +59,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Meal plan not found' }, { status: 404 })
     }
 
-    // mealDate must be within the plan's inclusive date range
     const mealDateStr = data.mealDate
     const startStr = serializeDateOnly(plan.startDate)!
     const endStr = serializeDateOnly(plan.endDate)!
-    if (!isInRange(mealDateStr, startStr, endStr)) {
-      return NextResponse.json(
-        { error: 'mealDate is outside the meal plan date range' },
-        { status: 400 },
-      )
-    }
 
     // Recipe must exist if provided
     if (data.recipeId) {
@@ -81,18 +74,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const meal = await prisma.plannedMeal.create({
-      data: {
-        mealPlanId: data.mealPlanId,
-        recipeId: data.recipeId,
-        mealDate: toDateOnly(data.mealDate),
-        mealType: data.mealType,
-        servingsPlanned: data.servingsPlanned,
-        notes: data.notes,
-      },
-      include: {
-        recipe: { select: PLANNED_MEAL_RECIPE_SELECT },
-      },
+    const meal = await prisma.$transaction(async (tx) => {
+      if (!isInRange(mealDateStr, startStr, endStr)) {
+        await tx.mealPlan.update({
+          where: { id: data.mealPlanId },
+          data: {
+            ...(mealDateStr < startStr
+              ? { startDate: toDateOnly(mealDateStr) }
+              : {}),
+            ...(mealDateStr > endStr
+              ? { endDate: toDateOnly(mealDateStr) }
+              : {}),
+          },
+        })
+      }
+
+      return tx.plannedMeal.create({
+        data: {
+          mealPlanId: data.mealPlanId,
+          recipeId: data.recipeId,
+          mealDate: toDateOnly(data.mealDate),
+          mealType: data.mealType,
+          servingsPlanned: data.servingsPlanned,
+          notes: data.notes,
+        },
+        include: {
+          recipe: { select: PLANNED_MEAL_RECIPE_SELECT },
+        },
+      })
     })
 
     return NextResponse.json(serializePlannedMeal(meal), { status: 201 })

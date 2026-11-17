@@ -111,32 +111,25 @@ describe('CalendarGrid', () => {
     expect(targetSlots[2].textContent).not.toContain('Pancakes')
   })
 
-  it('disables adding meals on days outside the editable range', () => {
+  it('keeps every visible day clickable (no disabled slots)', () => {
     const onAddMeal = jest.fn()
     render(
-      <CalendarGrid
-        startDate={START}
-        today={TODAY}
-        onAddMeal={onAddMeal}
-        editableRange={{ start: START, end: '2026-10-25' }}
-      />
+      <CalendarGrid startDate={START} today={TODAY} onAddMeal={onAddMeal} />
     )
-    const cells = screen.getAllByTestId('calendar-day')
-    const inRangeSlot = within(cells[0]).getAllByTestId('meal-slot')[0]
-    const outOfRangeSlot = within(cells[7]).getAllByTestId('meal-slot')[0]
-
-    expect(inRangeSlot).not.toHaveAttribute('data-out-of-range')
-    expect(outOfRangeSlot).toHaveAttribute('data-out-of-range', 'true')
-    expect(
-      within(outOfRangeSlot).queryByRole('button', {
-        name: /add to breakfast/i,
-      })
-    ).not.toBeInTheDocument()
-
-    fireEvent.click(outOfRangeSlot)
-    expect(onAddMeal).not.toHaveBeenCalled()
-    fireEvent.click(inRangeSlot)
-    expect(onAddMeal).toHaveBeenCalledWith('2026-10-19', 'BREAKFAST')
+    const slots = screen.getAllByTestId('meal-slot')
+    expect(slots).toHaveLength(84)
+    slots.forEach((slot) => {
+      expect(slot).not.toHaveAttribute('data-out-of-range')
+      expect(slot).not.toHaveAttribute('aria-disabled')
+      expect(slot.className).not.toContain('cursor-not-allowed')
+      expect(
+        within(slot).getByRole('button', { name: /add to/i })
+      ).toBeInTheDocument()
+      fireEvent.click(slot)
+    })
+    expect(onAddMeal).toHaveBeenCalledTimes(84)
+    expect(onAddMeal).toHaveBeenCalledWith(START, 'BREAKFAST')
+    expect(onAddMeal).toHaveBeenCalledWith(END, 'DINNER')
   })
 
   it('ignores planned meals outside the visible window', () => {

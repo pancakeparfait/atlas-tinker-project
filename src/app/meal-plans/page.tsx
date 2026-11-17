@@ -10,7 +10,6 @@ import {
   RecipePickerModal,
   type RecipePickerSelection,
 } from '@/components/meal-plans/recipe-picker-modal'
-import { isInRange } from '@/lib/date-only'
 import {
   useCreatePlannedMeal,
   useDeletePlannedMeal,
@@ -69,6 +68,7 @@ interface AnchorOverride {
 export default function MealPlansPage(): React.JSX.Element {
   const [anchorOverride, setAnchorOverride] =
     useState<AnchorOverride | null>(null)
+  const [planAnchors, setPlanAnchors] = useState<Record<string, string>>({})
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -80,10 +80,13 @@ export default function MealPlansPage(): React.JSX.Element {
   const activePlanId = activePlan?.id ?? ''
 
   const planWeekStart = activePlan ? mondayOf(activePlan.startDate) : null
+  if (activePlan && planWeekStart && planAnchors[activePlanId] === undefined) {
+    setPlanAnchors((prev) => ({ ...prev, [activePlanId]: planWeekStart }))
+  }
   const anchorWeekStart =
     anchorOverride && anchorOverride.planId === activePlanId
       ? anchorOverride.week
-      : (planWeekStart ?? currentWeekStart())
+      : (planAnchors[activePlanId] ?? planWeekStart ?? currentWeekStart())
 
   const today = format(new Date(), DATE_FORMAT)
   const windowStart = anchorWeekStart
@@ -112,12 +115,6 @@ export default function MealPlansPage(): React.JSX.Element {
     .filter((id): id is string => id !== null)
 
   const openPicker = (mealDate: string, mealType: MealType) => {
-    if (
-      activePlan &&
-      !isInRange(mealDate, activePlan.startDate, activePlan.endDate)
-    ) {
-      return
-    }
     setActionError(null)
     setPickerTarget({ mealDate, mealType })
   }
@@ -295,11 +292,6 @@ export default function MealPlansPage(): React.JSX.Element {
         onAddMeal={activePlanId ? openPicker : undefined}
         onRemoveMeal={handleRemoveMeal}
         onRemoveNote={handleRemoveNote}
-        editableRange={
-          activePlan
-            ? { start: activePlan.startDate, end: activePlan.endDate }
-            : null
-        }
       />
 
       {pickerTarget && (
