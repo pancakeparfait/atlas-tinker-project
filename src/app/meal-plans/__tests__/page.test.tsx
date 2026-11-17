@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import MealPlansPage from '../page'
 import {
   useMealPlans,
@@ -90,6 +90,23 @@ function orphanMeal(overrides: Partial<PlannedMealWithRecipe> = {}) {
     id: 'pm-orphan',
     servingsPlanned: 2,
     notes: 'Stale orphan note',
+    ...overrides,
+  })
+}
+
+function recipeMealWithNote(overrides: Partial<PlannedMealWithRecipe> = {}) {
+  return noteMeal({
+    id: 'pm-r1',
+    recipeId: 'r1',
+    servingsPlanned: 2,
+    notes: 'Leftovers night',
+    recipe: {
+      id: 'r1',
+      title: 'Pancakes',
+      prepTimeMinutes: 10,
+      cookTimeMinutes: 15,
+      difficultyLevel: 'EASY',
+    },
     ...overrides,
   })
 }
@@ -321,6 +338,28 @@ describe('MealPlansPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('does not open the picker for a slot outside the active plan range', () => {
+    const { container } = render(<MealPlansPage />)
+    const outsideDay = Array.from(
+      container.querySelectorAll('[data-testid="calendar-day"]')
+    ).find((cell) => cell.getAttribute('data-date') === '2026-10-26')
+    expect(outsideDay).toBeDefined()
+
+    const slot = within(outsideDay as HTMLElement).getAllByTestId(
+      'meal-slot'
+    )[0]
+    expect(slot).toHaveAttribute('aria-disabled', 'true')
+    expect(slot).toHaveAttribute('data-out-of-range', 'true')
+    expect(slot.className).toContain('cursor-not-allowed')
+    expect(
+      within(slot).queryByRole('button', { name: /add to breakfast/i })
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(slot)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(createMutate).not.toHaveBeenCalled()
+  })
+
   it('assigns multiple recipes and a note to a slot', () => {
     render(<MealPlansPage />)
     fireEvent.click(screen.getAllByTestId('meal-slot')[0])
@@ -462,6 +501,60 @@ describe('MealPlansPage', () => {
 
     expect(createMutate).not.toHaveBeenCalled()
     expect(updateMutate).not.toHaveBeenCalled()
+    expect(deleteMutate).not.toHaveBeenCalled()
+  })
+
+  it('loads a note stored on a recipe-backed row and updates that same row', () => {
+    mockQueries({ mealsData: [recipeMealWithNote()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    const note = screen.getByLabelText(/^note$/i)
+    expect(note).toHaveValue('Leftovers night')
+    fireEvent.change(note, { target: { value: 'Use fresh leftovers' } })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(updateMutate).toHaveBeenCalledWith({
+      id: 'pm-r1',
+      mealPlanId: 'p1',
+      data: { notes: 'Use fresh leftovers' },
+    })
+    expect(createMutate).not.toHaveBeenCalled()
+    expect(deleteMutate).not.toHaveBeenCalled()
+  })
+
+  it('clears a note on a recipe-backed row via PUT without deleting it', () => {
+    mockQueries({ mealsData: [recipeMealWithNote()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    fireEvent.change(screen.getByLabelText(/^note$/i), {
+      target: { value: '' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(updateMutate).toHaveBeenCalledWith({
+      id: 'pm-r1',
+      mealPlanId: 'p1',
+      data: { notes: null },
+    })
+    expect(createMutate).not.toHaveBeenCalled()
+    expect(deleteMutate).not.toHaveBeenCalled()
+  })
+
+  it('removes a note from a recipe-backed slot without removing the recipe', () => {
+    mockQueries({ mealsData: [recipeMealWithNote()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getByRole('button', { name: /remove note/i }))
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+
+    expect(updateMutate).toHaveBeenCalledWith({
+      id: 'pm-r1',
+      mealPlanId: 'p1',
+      data: { notes: null },
+    })
     expect(deleteMutate).not.toHaveBeenCalled()
   })
 

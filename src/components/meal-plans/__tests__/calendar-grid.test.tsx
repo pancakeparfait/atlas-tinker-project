@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { CalendarGrid } from '../calendar-grid'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
 
@@ -109,6 +109,34 @@ describe('CalendarGrid', () => {
     expect(targetSlots[1].textContent).toContain('Pancakes')
     expect(targetSlots[0].textContent).not.toContain('Pancakes')
     expect(targetSlots[2].textContent).not.toContain('Pancakes')
+  })
+
+  it('disables adding meals on days outside the editable range', () => {
+    const onAddMeal = jest.fn()
+    render(
+      <CalendarGrid
+        startDate={START}
+        today={TODAY}
+        onAddMeal={onAddMeal}
+        editableRange={{ start: START, end: '2026-10-25' }}
+      />
+    )
+    const cells = screen.getAllByTestId('calendar-day')
+    const inRangeSlot = within(cells[0]).getAllByTestId('meal-slot')[0]
+    const outOfRangeSlot = within(cells[7]).getAllByTestId('meal-slot')[0]
+
+    expect(inRangeSlot).not.toHaveAttribute('data-out-of-range')
+    expect(outOfRangeSlot).toHaveAttribute('data-out-of-range', 'true')
+    expect(
+      within(outOfRangeSlot).queryByRole('button', {
+        name: /add to breakfast/i,
+      })
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(outOfRangeSlot)
+    expect(onAddMeal).not.toHaveBeenCalled()
+    fireEvent.click(inRangeSlot)
+    expect(onAddMeal).toHaveBeenCalledWith('2026-10-19', 'BREAKFAST')
   })
 
   it('ignores planned meals outside the visible window', () => {

@@ -153,6 +153,40 @@ describe('MealSlot', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
+  it('does not call onAdd when the slot is out of range', () => {
+    const onAdd = jest.fn()
+    render(<MealSlot mealType="LUNCH" onAdd={onAdd} isOutOfRange />)
+    const slot = screen.getByTestId('meal-slot')
+
+    expect(slot).toHaveAttribute('aria-disabled', 'true')
+    expect(slot.className).toContain('cursor-not-allowed')
+    fireEvent.click(slot)
+    expect(onAdd).not.toHaveBeenCalled()
+  })
+
+  it('removes a note from a recipe-backed row without removing the recipe', () => {
+    const onRemoveMeal = jest.fn()
+    const onRemoveNote = jest.fn()
+    const meal = makeMeal({ notes: 'Double batch' })
+    render(
+      <MealSlot
+        mealType="LUNCH"
+        plannedMeals={[meal]}
+        onRemoveMeal={onRemoveMeal}
+        onRemoveNote={onRemoveNote}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /remove note/i }))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(screen.getByText(/remove note\?/i)).toBeInTheDocument()
+    expect(onRemoveNote).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }))
+    expect(onRemoveNote).toHaveBeenCalledWith(meal)
+    expect(onRemoveMeal).not.toHaveBeenCalled()
+  })
+
   it('asks for confirmation before removing a note', () => {
     const onRemoveMeal = jest.fn()
     render(

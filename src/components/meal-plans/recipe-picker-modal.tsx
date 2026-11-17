@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MEAL_CATEGORIES } from '@/components/recipes/recipe-form-schema'
-import { MEAL_TYPE_LABELS } from '@/components/meal-plans/meal-slot'
+import { MEAL_TYPE_LABELS } from '@/components/meal-plans/meal-constants'
 import { cn } from '@/lib/utils'
 import {
   useRecipes,

@@ -10,6 +10,7 @@ import {
   RecipePickerModal,
   type RecipePickerSelection,
 } from '@/components/meal-plans/recipe-picker-modal'
+import { isInRange } from '@/lib/date-only'
 import {
   useCreatePlannedMeal,
   useDeletePlannedMeal,
@@ -111,6 +112,12 @@ export default function MealPlansPage(): React.JSX.Element {
     .filter((id): id is string => id !== null)
 
   const openPicker = (mealDate: string, mealType: MealType) => {
+    if (
+      activePlan &&
+      !isInRange(mealDate, activePlan.startDate, activePlan.endDate)
+    ) {
+      return
+    }
     setActionError(null)
     setPickerTarget({ mealDate, mealType })
   }
@@ -147,12 +154,22 @@ export default function MealPlansPage(): React.JSX.Element {
 
     if (noteRow) {
       if (trimmedNote === '') {
-        operations.push(
-          deletePlannedMeal.mutateAsync({
-            id: noteRow.id,
-            mealPlanId: activePlanId,
-          })
-        )
+        if (noteRow.recipeId === null) {
+          operations.push(
+            deletePlannedMeal.mutateAsync({
+              id: noteRow.id,
+              mealPlanId: activePlanId,
+            })
+          )
+        } else {
+          operations.push(
+            updatePlannedMeal.mutateAsync({
+              id: noteRow.id,
+              mealPlanId: activePlanId,
+              data: { notes: null },
+            })
+          )
+        }
       } else if (trimmedNote !== (noteRow.notes ?? '').trim()) {
         operations.push(
           updatePlannedMeal.mutateAsync({
@@ -194,6 +211,21 @@ export default function MealPlansPage(): React.JSX.Element {
       })
     } catch {
       setActionError('Could not remove that item. Please try again.')
+    }
+  }
+
+  const handleRemoveNote = async (
+    meal: PlannedMealWithRecipe
+  ): Promise<void> => {
+    setActionError(null)
+    try {
+      await updatePlannedMeal.mutateAsync({
+        id: meal.id,
+        mealPlanId: meal.mealPlanId,
+        data: { notes: null },
+      })
+    } catch {
+      setActionError('Could not remove that note. Please try again.')
     }
   }
 
@@ -262,6 +294,12 @@ export default function MealPlansPage(): React.JSX.Element {
         plannedMeals={plannedMeals}
         onAddMeal={activePlanId ? openPicker : undefined}
         onRemoveMeal={handleRemoveMeal}
+        onRemoveNote={handleRemoveNote}
+        editableRange={
+          activePlan
+            ? { start: activePlan.startDate, end: activePlan.endDate }
+            : null
+        }
       />
 
       {pickerTarget && (
