@@ -10,6 +10,7 @@ import {
 } from '@/lib/queries/meal-plan-queries'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
 import { useRecipes } from '@/lib/queries/recipe-queries'
+import { isInRange } from '@/lib/date-only'
 
 jest.mock('@/lib/queries/meal-plan-queries', () => ({
   useMealPlans: jest.fn(),
@@ -82,6 +83,15 @@ function noteMeal(overrides: Partial<PlannedMealWithRecipe> = {}) {
     recipe: null,
     ...overrides,
   }
+}
+
+function orphanMeal(overrides: Partial<PlannedMealWithRecipe> = {}) {
+  return noteMeal({
+    id: 'pm-orphan',
+    servingsPlanned: 2,
+    notes: 'Stale orphan note',
+    ...overrides,
+  })
 }
 
 const plans = [
@@ -163,13 +173,38 @@ describe('MealPlansPage', () => {
     expect(screen.getByText('Week of Brunch')).toBeInTheDocument()
   })
 
-  it('loads planned meals for the current 4-week window', () => {
+  it('loads planned meals for the active plan 4-week window', () => {
     render(<MealPlansPage />)
     expect(mealsMock).toHaveBeenCalledWith(
       'p1',
       CURRENT_WEEK_MONDAY,
       CURRENT_WEEK_SUNDAY
     )
+  })
+
+  it('anchors a past-dated plan so a slot click sends an in-range mealDate', () => {
+    const pastPlan = {
+      ...plans[0],
+      id: 'p-past',
+      name: 'Old Week',
+      startDate: '2026-10-05',
+      endDate: '2026-10-11',
+    }
+    mockQueries({ plansData: [pastPlan] })
+    const { container } = render(<MealPlansPage />)
+
+    expect(mealsMock).toHaveBeenCalledWith('p-past', '2026-10-05', '2026-11-01')
+    expect(firstVisibleDate(container)).toBe('2026-10-05')
+
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+    fireEvent.click(screen.getByRole('checkbox', { name: /pancakes/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    const assignment = createMutate.mock.calls[0][0]
+    expect(assignment.mealDate).toBe('2026-10-05')
+    expect(
+      isInRange(assignment.mealDate, pastPlan.startDate, pastPlan.endDate)
+    ).toBe(true)
   })
 
   it('shows 4 weeks of days starting on the current Monday with empty slot labels', () => {
@@ -360,7 +395,7 @@ describe('MealPlansPage', () => {
   })
 
   it('updates an existing slot note via PUT', () => {
-    mockQueries({ mealsData: [noteMeal()] })
+    mockQueries({ mealsData: [orphanMeal(), noteMeal()] })
     render(<MealPlansPage />)
     fireEvent.click(screen.getAllByTestId('meal-slot')[0])
 
@@ -390,6 +425,44 @@ describe('MealPlansPage', () => {
       id: 'pm-note',
       mealPlanId: 'p1',
     })
+  })
+
+  it('does not treat an orphaned recipe row as the slot note row', () => {
+    mockQueries({ mealsData: [orphanMeal()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    expect(screen.getByLabelText(/^note$/i)).toHaveValue('')
+    fireEvent.change(screen.getByLabelText(/^note$/i), {
+      target: { value: 'Order takeout' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(createMutate).toHaveBeenCalledWith({
+      mealPlanId: 'p1',
+      recipeId: null,
+      mealDate: CURRENT_WEEK_MONDAY,
+      mealType: 'BREAKFAST',
+      servingsPlanned: 0,
+      notes: 'Order takeout',
+    })
+    expect(updateMutate).not.toHaveBeenCalled()
+    expect(deleteMutate).not.toHaveBeenCalled()
+  })
+
+  it('never deletes an orphaned recipe row when the note is cleared', () => {
+    mockQueries({ mealsData: [orphanMeal()] })
+    render(<MealPlansPage />)
+    fireEvent.click(screen.getAllByTestId('meal-slot')[0])
+
+    const note = screen.getByLabelText(/^note$/i)
+    fireEvent.change(note, { target: { value: 'temp' } })
+    fireEvent.change(note, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /add to meal/i }))
+
+    expect(createMutate).not.toHaveBeenCalled()
+    expect(updateMutate).not.toHaveBeenCalled()
+    expect(deleteMutate).not.toHaveBeenCalled()
   })
 
   it('removes a planned meal after confirmation', () => {

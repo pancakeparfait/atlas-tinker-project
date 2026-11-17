@@ -175,6 +175,20 @@ describe('PUT /api/planned-meals/[id]', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects a note edit on an orphaned recipe row', async () => {
+    findUnique.mockResolvedValue(
+      makeMeal({ servingsPlanned: 2, notes: 'Stale orphan note' })
+    )
+    planFindUnique.mockResolvedValue(makePlan())
+    const req = new NextRequest('http://test/api/planned-meals/pm1', {
+      method: 'PUT',
+      body: JSON.stringify({ notes: 'New note' }),
+    })
+    const res = await PUT(req, { params })
+    expect(res.status).toBe(400)
+    expect(update).not.toHaveBeenCalled()
+  })
+
   it('returns 400 for a recipe-backed meal with zero servings', async () => {
     findUnique.mockResolvedValue(
       makeMeal({ recipeId: 'r1', servingsPlanned: 2, notes: null })

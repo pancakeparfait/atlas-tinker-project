@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import type { MealCategory, MealType } from '@prisma/client'
 import { format, parse } from 'date-fns'
-import { Search } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -22,20 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
 import { MEAL_CATEGORIES } from '@/components/recipes/recipe-form-schema'
+import { MEAL_TYPE_LABELS } from '@/components/meal-plans/meal-slot'
+import { cn } from '@/lib/utils'
 import {
   useRecipes,
   type RecipeListItem,
 } from '@/lib/queries/recipe-queries'
-import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
-
-const MEAL_TYPE_LABELS: Record<MealType, string> = {
-  BREAKFAST: 'Breakfast',
-  LUNCH: 'Lunch',
-  DINNER: 'Dinner',
-  SNACK: 'Snack',
-}
+import { Search } from 'lucide-react'
 
 export interface RecipePickerSelection {
   recipeIds: string[]
@@ -47,7 +40,8 @@ export interface RecipePickerModalProps {
   onOpenChange: (open: boolean) => void
   mealDate: string
   mealType: MealType
-  existingMeals?: PlannedMealWithRecipe[]
+  existingNote?: string
+  assignedRecipeIds?: string[]
   onSubmit: (selection: RecipePickerSelection) => void | Promise<void>
   isSaving?: boolean
 }
@@ -57,17 +51,12 @@ export function RecipePickerModal({
   onOpenChange,
   mealDate,
   mealType,
-  existingMeals = [],
+  existingNote = '',
+  assignedRecipeIds = [],
   onSubmit,
   isSaving = false,
 }: RecipePickerModalProps): React.JSX.Element {
-  const existingNote =
-    existingMeals.find((meal) => meal.recipeId === null)?.notes ?? ''
-  const existingRecipeIds = new Set(
-    existingMeals
-      .map((meal) => meal.recipeId)
-      .filter((id): id is string => id !== null)
-  )
+  const existingRecipeIds = new Set(assignedRecipeIds)
 
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<string>('all')

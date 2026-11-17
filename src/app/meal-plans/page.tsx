@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { addDays, addWeeks, format, parse, startOfWeek } from 'date-fns'
 import type { MealType } from '@prisma/client'
 import { CalendarGrid } from '@/components/meal-plans/calendar-grid'
+import { findSlotNoteMeal } from '@/components/meal-plans/meal-slot'
 import { WeekNavigation } from '@/components/meal-plans/week-navigation'
 import {
   RecipePickerModal,
@@ -20,6 +21,15 @@ import {
 
 const VISIBLE_WEEKS = 4
 const DATE_FORMAT = 'yyyy-MM-dd'
+
+function mondayOf(dateOnly: string): string {
+  return format(
+    startOfWeek(parse(dateOnly, DATE_FORMAT, new Date()), {
+      weekStartsOn: 1,
+    }),
+    DATE_FORMAT
+  )
+}
 
 function currentWeekStart(): string {
   return format(startOfWeek(new Date(), { weekStartsOn: 1 }), DATE_FORMAT)
@@ -50,8 +60,14 @@ interface PickerTarget {
   mealType: MealType
 }
 
+interface AnchorOverride {
+  planId: string
+  week: string
+}
+
 export default function MealPlansPage(): React.JSX.Element {
-  const [anchorWeekStart, setAnchorWeekStart] = useState(currentWeekStart)
+  const [anchorOverride, setAnchorOverride] =
+    useState<AnchorOverride | null>(null)
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -61,6 +77,12 @@ export default function MealPlansPage(): React.JSX.Element {
   // dropdown lands in issue #4.
   const activePlan = plans[0]
   const activePlanId = activePlan?.id ?? ''
+
+  const planWeekStart = activePlan ? mondayOf(activePlan.startDate) : null
+  const anchorWeekStart =
+    anchorOverride && anchorOverride.planId === activePlanId
+      ? anchorOverride.week
+      : (planWeekStart ?? currentWeekStart())
 
   const today = format(new Date(), DATE_FORMAT)
   const windowStart = anchorWeekStart
@@ -83,10 +105,18 @@ export default function MealPlansPage(): React.JSX.Element {
           meal.mealType === pickerTarget.mealType
       )
     : []
+  const pickerNoteMeal = findSlotNoteMeal(pickerMeals)
+  const pickerAssignedRecipeIds = pickerMeals
+    .map((meal) => meal.recipeId)
+    .filter((id): id is string => id !== null)
 
   const openPicker = (mealDate: string, mealType: MealType) => {
     setActionError(null)
     setPickerTarget({ mealDate, mealType })
+  }
+
+  const setWindow = (week: string) => {
+    setAnchorOverride({ planId: activePlanId, week })
   }
 
   const handleAssign = async ({
@@ -96,12 +126,8 @@ export default function MealPlansPage(): React.JSX.Element {
     if (!activePlanId || !pickerTarget) return
     setActionError(null)
 
-    const existingRecipeIds = new Set(
-      pickerMeals
-        .map((meal) => meal.recipeId)
-        .filter((id): id is string => id !== null)
-    )
-    const noteRow = pickerMeals.find((meal) => meal.recipeId === null)
+    const existingRecipeIds = new Set(pickerAssignedRecipeIds)
+    const noteRow = pickerNoteMeal
     const trimmedNote = note.trim()
 
     const operations: Promise<unknown>[] = []
@@ -196,9 +222,9 @@ export default function MealPlansPage(): React.JSX.Element {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold">Meal Plans</h1>
         <WeekNavigation
-          onPrevious={() => setAnchorWeekStart((prev) => shiftWeeks(prev, -1))}
-          onNext={() => setAnchorWeekStart((prev) => shiftWeeks(prev, 1))}
-          onToday={() => setAnchorWeekStart(currentWeekStart())}
+          onPrevious={() => setWindow(shiftWeeks(anchorWeekStart, -1))}
+          onNext={() => setWindow(shiftWeeks(anchorWeekStart, 1))}
+          onToday={() => setWindow(currentWeekStart())}
         />
       </div>
 
@@ -246,7 +272,8 @@ export default function MealPlansPage(): React.JSX.Element {
           }}
           mealDate={pickerTarget.mealDate}
           mealType={pickerTarget.mealType}
-          existingMeals={pickerMeals}
+          existingNote={pickerNoteMeal?.notes ?? ''}
+          assignedRecipeIds={pickerAssignedRecipeIds}
           onSubmit={handleAssign}
           isSaving={isSaving}
         />

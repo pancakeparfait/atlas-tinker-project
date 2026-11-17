@@ -12,15 +12,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
+import { Plus, X } from 'lucide-react'
 
-const MEAL_TYPE_LABELS: Record<MealType, string> = {
+export const MEAL_TYPE_LABELS: Record<MealType, string> = {
   BREAKFAST: 'Breakfast',
   LUNCH: 'Lunch',
   DINNER: 'Dinner',
   SNACK: 'Snack',
+}
+
+export function findSlotNoteMeal(
+  meals: PlannedMealWithRecipe[]
+): PlannedMealWithRecipe | undefined {
+  return meals.find(
+    (meal) => meal.recipeId === null && meal.servingsPlanned === 0
+  )
 }
 
 export interface MealSlotProps {

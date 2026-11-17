@@ -2,7 +2,6 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { RecipePickerModal } from '../recipe-picker-modal'
 import { useRecipes } from '@/lib/queries/recipe-queries'
-import type { PlannedMealWithRecipe } from '@/lib/queries/meal-plan-queries'
 
 jest.mock('@/lib/queries/recipe-queries', () => ({
   useRecipes: jest.fn(),
@@ -51,28 +50,6 @@ function mockRecipes(overrides: Record<string, unknown> = {}) {
     error: null,
     ...overrides,
   })
-}
-
-function makeMeal(
-  overrides: Partial<PlannedMealWithRecipe> = {}
-): PlannedMealWithRecipe {
-  return {
-    id: 'pm1',
-    mealPlanId: 'p1',
-    recipeId: 'r1',
-    mealDate: '2026-10-21',
-    mealType: 'DINNER',
-    servingsPlanned: 2,
-    notes: null,
-    recipe: {
-      id: 'r1',
-      title: 'Pancakes',
-      prepTimeMinutes: 10,
-      cookTimeMinutes: 15,
-      difficultyLevel: 'EASY',
-    },
-    ...overrides,
-  }
 }
 
 function renderModal(
@@ -165,16 +142,8 @@ describe('RecipePickerModal', () => {
 
   it('starts with the existing slot note and marks assigned recipes as added', () => {
     renderModal({
-      existingMeals: [
-        makeMeal(),
-        makeMeal({
-          id: 'pm2',
-          recipeId: null,
-          recipe: null,
-          servingsPlanned: 0,
-          notes: 'Order takeout',
-        }),
-      ],
+      existingNote: 'Order takeout',
+      assignedRecipeIds: ['r1'],
     })
 
     expect(screen.getByLabelText(/note/i)).toHaveValue('Order takeout')
